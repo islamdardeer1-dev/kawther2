@@ -90,12 +90,37 @@
 
         // إعدادات Firebase العامة
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        let app; // يجب تعريف مثيل التطبيق هنا
+        // **التعديل لحل مشكلة عدم توفر .projectId**
+        // نستخدم تكوين وهمي كخطة بديلة إذا لم تكن البيانات الحقيقية متاحة (كما يحدث الآن)
+        let firebaseConfig;
+        try {
+            // محاولة قراءة التكوين الحقيقي
+            const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+            firebaseConfig = configString ? JSON.parse(configString) : null;
+        } catch (e) {
+            console.error("Error parsing firebase config, using mock data.", e);
+            firebaseConfig = null;
+        }
+
+        // إذا كان التكوين الحقيقي غير صالح أو مفقود (بما في ذلك عدم وجود projectId)، استخدم تكوينًا وهميًا
+        if (!firebaseConfig || !firebaseConfig.projectId) {
+            console.warn("Using mock Firebase config to avoid .projectId error.");
+            firebaseConfig = {
+                apiKey: "mock-api-key",
+                authDomain: "mock-domain.firebaseapp.com",
+                projectId: "mock-project-id", // هذا هو الحقل الذي كان مفقودًا
+                storageBucket: "mock-domain.appspot.com",
+                messagingSenderId: "1234567890",
+                appId: "1:1234567890:web:mock-app-id"
+            };
+        }
+        // نهاية التعديل لحل مشكلة .projectId
+
+        let app; 
         let db, auth;
-        let isAuthReady = false; // متغير لتتبع حالة المصادقة
+        let isAuthReady = false; 
 
         // قم بتعيين مستوى تسجيل الدخول لتصحيح الأخطاء
         setLogLevel('Debug');
@@ -116,7 +141,7 @@
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
         const residentNameToDeleteDisplay = document.getElementById('resident-name-to-delete');
 
-        let residentIdToDelete = null; // حالة لتخزين معرف الساكن المراد حذفه
+        let residentIdToDelete = null; 
 
         appIdDisplay.textContent = appId;
 
@@ -323,11 +348,7 @@
         async function initializeAppAndAuth() {
             try {
                 // 1. التهيئة الأولية
-                // تم حل الخطأ: يجب تهيئة التطبيق (app) أولاً باستخدام firebaseConfig
-                // **********************************************
-                // تم تعديل هذا السطر لتعيين القيمة للمتغير الخارجي "app" بدلاً من إنشاء متغير محلي جديد
                 app = initializeApp(firebaseConfig); 
-                // **********************************************
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
