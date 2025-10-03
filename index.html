@@ -6,7 +6,7 @@
     <title>تسجيل سكان برج 2 الأوقاف</title>
     <!-- تحميل Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- استخدام خط Inter كنص افتراضي -->
+    <!-- استخدام خط Cairo كنص افتراضي -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         body {
@@ -37,32 +37,35 @@
             <div>
                 <label for="resident-name" class="block text-sm font-medium text-gray-700">اسم الساكن</label>
                 <input type="text" id="resident-name" required placeholder="أدخل الاسم كاملاً"
-                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                        class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
             </div>
 
             <!-- رقم الهاتف -->
             <div>
                 <label for="phone-number" class="block text-sm font-medium text-gray-700">رقم الهاتف</label>
                 <input type="tel" id="phone-number" required placeholder="أدخل رقم الهاتف (مثال: 05xxxxxxxxx)"
-                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                        class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
             </div>
 
-            <!-- الدور -->
-            <div>
-                <label for="floor-select" class="block text-sm font-medium text-gray-700">الدور</label>
-                <select id="floor-select" required
-                        class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-pointer">
-                    <option value="" disabled selected>اختر الدور</option>
-                </select>
-            </div>
+            <!-- الدور ورقم الشقة في صف واحد (Responsive) -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <!-- الدور -->
+                <div class="flex-1">
+                    <label for="floor-select" class="block text-sm font-medium text-gray-700">الدور</label>
+                    <select id="floor-select" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-pointer appearance-none">
+                        <option value="" disabled selected>اختر دور المبنى</option>
+                    </select>
+                </div>
 
-            <!-- رقم الشقة/المخزن (متغير) -->
-            <div>
-                <label for="unit-select" class="block text-sm font-medium text-gray-700">رقم الشقة / المخزن</label>
-                <select id="unit-select" required disabled
-                        class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-gray-100 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-not-allowed">
-                    <option value="" disabled selected>اختر الدور أولاً</option>
-                </select>
+                <!-- رقم الشقة/المخزن (متغير) -->
+                <div class="flex-1">
+                    <label for="unit-select" class="block text-sm font-medium text-gray-700">رقم الشقة / المخزن</label>
+                    <select id="unit-select" required disabled
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-gray-100 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-not-allowed appearance-none">
+                        <option value="" disabled selected>اختر الدور أولاً لتظهر الشقق</option>
+                    </select>
+                </div>
             </div>
 
             <!-- زر التسجيل -->
@@ -81,11 +84,29 @@
 
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- Custom Confirmation Modal (حوار التأكيد المخصص) -->
+    <div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden transition-opacity duration-300 opacity-0">
+        <div id="modal-content" class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all duration-300 scale-95 opacity-0">
+            <h3 class="text-xl font-bold text-red-600 mb-4">تأكيد الحذف</h3>
+            <p class="text-gray-700 mb-6">
+                هل أنت متأكد من أنك تريد حذف هذا السجل؟ لا يمكن التراجع عن هذا الإجراء.
+            </p>
+            <div class="flex justify-end space-x-3 rtl:space-x-reverse">
+                <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition duration-150">
+                    إلغاء
+                </button>
+                <button id="confirm-delete-btn" data-resident-id="" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium shadow-md hover:bg-red-700 transition duration-150">
+                    تأكيد الحذف
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs and Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // إعدادات Firebase العامة
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -99,18 +120,26 @@
         // قم بتعيين مستوى تسجيل الدخول لتصحيح الأخطاء
         setLogLevel('Debug');
 
+        // عناصر الواجهة
         const floorSelect = document.getElementById('floor-select');
         const unitSelect = document.getElementById('unit-select');
         const registrationForm = document.getElementById('registration-form');
         const residentsList = document.getElementById('residents-list');
         const messageBox = document.getElementById('message-box');
-        const loadingIndicator = document.getElementById('loading-indicator');
         const appIdDisplay = document.getElementById('app-id-display');
         const userIdDisplay = document.getElementById('user-id-display');
+        
+        // عناصر النافذة المنبثقة (Modal)
+        const deleteModal = document.getElementById('delete-modal');
+        const modalContent = document.getElementById('modal-content');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+        let residentIdToDelete = null; // حالة لتخزين معرف الساكن المراد حذفه
 
         appIdDisplay.textContent = appId;
 
-        // خريطة الوحدات لكل دور
+        // خريطة الوحدات لكل دور (كما كانت)
         const floorMap = {
             'Ground': ['مخزن الشريف', 'مخزن الكوثر'],
             '1': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 1}`), // 1 to 8
@@ -173,7 +202,7 @@
                 unitSelect.classList.remove('bg-white', 'cursor-pointer');
                 const option = document.createElement('option');
                 option.value = '';
-                option.textContent = 'اختر الدور أولاً';
+                option.textContent = 'اختر الدور أولاً لتظهر الشقق'; // تم التعديل
                 option.disabled = true;
                 option.selected = true;
                 unitSelect.appendChild(option);
@@ -244,6 +273,52 @@
             }
         }
 
+        // --- وظائف إدارة النافذة المنبثقة (Modal) ---
+
+        function showDeleteModal(residentId) {
+            residentIdToDelete = residentId;
+            // إظهار النافذة المنبثقة
+            deleteModal.classList.remove('hidden');
+            // تطبيق تأثير الدخول (fade/scale in)
+            setTimeout(() => {
+                deleteModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95', 'opacity-0');
+            }, 10);
+        }
+
+        function hideDeleteModal() {
+            // تطبيق تأثير الخروج (fade/scale out)
+            modalContent.classList.add('scale-95', 'opacity-0');
+            deleteModal.classList.add('opacity-0');
+            setTimeout(() => {
+                deleteModal.classList.add('hidden');
+                residentIdToDelete = null; // مسح المعرّف بعد الإخفاء
+            }, 300); // الانتظار حتى انتهاء الانتقال
+        }
+
+        // دالة لحذف ساكن (تقوم الآن بإظهار النافذة المنبثقة للتأكيد)
+        function deleteResident(event) {
+            const residentId = event.currentTarget.getAttribute('data-id');
+            showDeleteModal(residentId);
+        }
+
+        // دالة لتنفيذ عملية الحذف بعد التأكيد من النافذة المنبثقة
+        async function deleteResidentConfirmed() {
+            const residentId = residentIdToDelete;
+            if (!residentId) return;
+
+            hideDeleteModal(); // إخفاء النافذة المنبثقة
+
+            try {
+                const docRef = doc(db, `/artifacts/${appId}/public/data/tower2_residents`, residentId);
+                await deleteDoc(docRef);
+                showMessage('تم حذف السجل بنجاح.', 'success');
+            } catch (e) {
+                console.error("Error deleting document: ", e);
+                showMessage('حدث خطأ أثناء حذف السجل: ' + e.message, 'error');
+            }
+        }
+
         // دالة لعرض قائمة السكان في الوقت الفعلي
         function setupRealtimeListener() {
             const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
@@ -260,6 +335,7 @@
                 });
 
                 // فرز السكان حسب الوقت (الأحدث أولاً)
+                // يجب الانتباه إلى أن timestamp قد تكون null مؤقتًا إذا لم يتم إرسالها بعد، لذلك نقوم بالفرز في JavaScript
                 residentsArray.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
 
                 if (residentsArray.length === 0) {
@@ -276,7 +352,7 @@
                                 <p class="text-sm text-indigo-600 font-medium">${resident.floor} - ${resident.unit}</p>
                                 <a href="${phoneLink}" class="text-sm text-gray-600 hover:text-indigo-500 transition duration-150">${resident.phone}</a>
                             </div>
-                            <!-- زر حذف السجل (اختياري لكن مفيد للإدارة) -->
+                            <!-- زر حذف السجل (يفتح النافذة المنبثقة) -->
                             <button data-id="${resident.id}" class="delete-btn text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100" title="حذف السجل">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
@@ -295,23 +371,6 @@
                 console.error("Error listening to residents list: ", error);
                 residentsList.innerHTML = `<p class="text-red-500 text-center">خطأ في تحميل البيانات: ${error.message}</p>`;
             });
-        }
-
-        // دالة لحذف ساكن
-        async function deleteResident(event) {
-            const residentId = event.currentTarget.getAttribute('data-id');
-            if (!confirm('هل أنت متأكد من حذف سجل هذا الساكن؟')) { // استخدام تأكيد بسيط لضرورات الإدارة
-                return;
-            }
-
-            try {
-                const docRef = doc(db, `/artifacts/${appId}/public/data/tower2_residents`, residentId);
-                await deleteDoc(docRef);
-                showMessage('تم حذف السجل بنجاح.', 'success');
-            } catch (e) {
-                console.error("Error deleting document: ", e);
-                showMessage('حدث خطأ أثناء حذف السجل: ' + e.message, 'error');
-            }
         }
 
         // التهيئة وبدء التشغيل
@@ -333,6 +392,16 @@
                 // إضافة معالجات الأحداث
                 floorSelect.addEventListener('change', updateUnitOptions);
                 registrationForm.addEventListener('submit', addResident);
+
+                // معالجات أحداث النافذة المنبثقة
+                cancelDeleteBtn.addEventListener('click', hideDeleteModal);
+                confirmDeleteBtn.addEventListener('click', deleteResidentConfirmed);
+                // إغلاق النافذة المنبثقة عند النقر على الخلفية
+                deleteModal.addEventListener('click', (e) => {
+                    if (e.target === deleteModal) {
+                        hideDeleteModal();
+                    }
+                });
 
                 // بدء الاستماع لقائمة السكان
                 setupRealtimeListener();
