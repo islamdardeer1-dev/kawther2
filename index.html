@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- ضبط الخط الافتراضي لـ Inter وتفعيل نمط RTL -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900;950&display=swap');
         body {
             font-family: 'Cairo', sans-serif;
             background-color: #f7f9fb;
@@ -808,9 +808,6 @@
             }
         }
 
-        // منطق التعديل للسكان (Edit Modal) - تم الاحتفاظ به مع تحديث اسم المجموعة
-        // ... (منطق openEditModal, input listener, closeEditModalBtn listener)
-        
         /**
          * فتح نافذة التعديل ببيانات الساكن
          */
@@ -838,6 +835,7 @@
             editModal.classList.add('hidden');
         });
 
+        // 🟢🟢 هذا هو الجزء الذي يضمن عدم مسح البيانات (باستخدام updateDoc) 🟢🟢
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -860,6 +858,9 @@
 
             try {
                 const docRef = doc(db, getCollectionPath('residents'), docId);
+                
+                // ✅ استخدام updateDoc لضمان التحديث الجزئي.
+                // هذا يحافظ على حقول مثل createdAt و createdBy.
                 await updateDoc(docRef, {
                     name: name,
                     phone: phone,
@@ -868,7 +869,7 @@
                     updatedAt: new Date().toISOString()
                 });
 
-                console.log("Resident document successfully updated!");
+                console.log("Resident document successfully updated (Partial Update enforced by updateDoc)!");
                 editModal.classList.add('hidden');
             } catch (error) {
                 console.error("Error updating resident document: ", error);
@@ -915,6 +916,7 @@
                     createdBy: userId
                 };
 
+                // استخدام addDoc ينشئ مستنداً جديداً بالبيانات المذكورة فقط.
                 await addDoc(collection(db, getCollectionPath('residents')), newResident);
                 
                 nameInput.value = '';
