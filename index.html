@@ -323,9 +323,10 @@
         async function initializeAppAndAuth() {
             try {
                 // 1. التهيئة الأولية
-                // **********************************************
                 // تم حل الخطأ: يجب تهيئة التطبيق (app) أولاً باستخدام firebaseConfig
-                const app = initializeApp(firebaseConfig);
+                // **********************************************
+                // تم تعديل هذا السطر لتعيين القيمة للمتغير الخارجي "app" بدلاً من إنشاء متغير محلي جديد
+                app = initializeApp(firebaseConfig); 
                 // **********************************************
                 db = getFirestore(app);
                 auth = getAuth(app);
