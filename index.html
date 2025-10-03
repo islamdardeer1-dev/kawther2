@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل سكان برج 2 الأوقاف</title>
+    <!-- تحميل Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- استخدام خط Inter كنص افتراضي -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        body {
+            font-family: 'Cairo', 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .container {
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div id="app" class="container mx-auto bg-white shadow-xl rounded-xl p-6 sm:p-10 border border-gray-200">
+        <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6 border-b pb-3">سجل سكان برج 2 الأوقاف</h1>
+
+        <!-- رسالة النظام -->
+        <div id="message-box" class="hidden p-3 mb-4 rounded-lg text-center font-medium" role="alert"></div>
+
+        <!-- معلومات المستخدم -->
+        <div class="text-xs text-gray-500 mb-4 text-left">
+            <p>معرّف التطبيق: <span id="app-id-display" class="font-mono">...</span></p>
+            <p>معرّف المستخدم: <span id="user-id-display" class="font-mono">...</span></p>
+        </div>
+
+        <form id="registration-form" class="space-y-6">
+            <!-- اسم الساكن -->
+            <div>
+                <label for="resident-name" class="block text-sm font-medium text-gray-700">اسم الساكن</label>
+                <input type="text" id="resident-name" required placeholder="أدخل الاسم كاملاً"
+                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+            </div>
+
+            <!-- رقم الهاتف -->
+            <div>
+                <label for="phone-number" class="block text-sm font-medium text-gray-700">رقم الهاتف</label>
+                <input type="tel" id="phone-number" required placeholder="أدخل رقم الهاتف (مثال: 05xxxxxxxxx)"
+                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+            </div>
+
+            <!-- الدور -->
+            <div>
+                <label for="floor-select" class="block text-sm font-medium text-gray-700">الدور</label>
+                <select id="floor-select" required
+                        class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-pointer">
+                    <option value="" disabled selected>اختر الدور</option>
+                </select>
+            </div>
+
+            <!-- رقم الشقة/المخزن (متغير) -->
+            <div>
+                <label for="unit-select" class="block text-sm font-medium text-gray-700">رقم الشقة / المخزن</label>
+                <select id="unit-select" required disabled
+                        class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-gray-100 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-not-allowed">
+                    <option value="" disabled selected>اختر الدور أولاً</option>
+                </select>
+            </div>
+
+            <!-- زر التسجيل -->
+            <button type="submit" id="submit-button"
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 disabled:bg-indigo-300 disabled:cursor-not-allowed">
+                تسجيل ساكن جديد
+            </button>
+        </form>
+
+        <div class="mt-10 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">قائمة السكان المسجلين</h2>
+            <div id="residents-list" class="space-y-3">
+                <p class="text-gray-500 text-center" id="loading-indicator">جاري تحميل قائمة السكان...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // إعدادات Firebase العامة
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // قم بتعيين مستوى تسجيل الدخول لتصحيح الأخطاء
+        setLogLevel('Debug');
+
+        const floorSelect = document.getElementById('floor-select');
+        const unitSelect = document.getElementById('unit-select');
+        const registrationForm = document.getElementById('registration-form');
+        const residentsList = document.getElementById('residents-list');
+        const messageBox = document.getElementById('message-box');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const appIdDisplay = document.getElementById('app-id-display');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        appIdDisplay.textContent = appId;
+
+        // خريطة الوحدات لكل دور
+        const floorMap = {
+            'Ground': ['مخزن الشريف', 'مخزن الكوثر'],
+            '1': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 1}`), // 1 to 8
+            '2': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 9}`), // 9 to 16
+            '3': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 17}`), // 17 to 24
+            '4': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 25}`), // 25 to 32
+            '5': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 33}`), // 33 to 40
+            '6': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 41}`), // 41 to 48
+            '7': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 49}`), // 49 to 56
+            '8': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 57}`), // 57 to 64
+            '9': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 65}`), // 65 to 72
+            '10': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 73}`), // 73 to 80
+            '11': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 81}`), // 81 to 88
+        };
+
+        // إنشاء خيارات الدور في القائمة المنسدلة
+        function populateFloorOptions() {
+            const floorOptions = {
+                'Ground': 'الأرضي/المخزن',
+                '1': 'الدور 1',
+                '2': 'الدور 2',
+                '3': 'الدور 3',
+                '4': 'الدور 4',
+                '5': 'الدور 5',
+                '6': 'الدور 6',
+                '7': 'الدور 7',
+                '8': 'الدور 8',
+                '9': 'الدور 9',
+                '10': 'الدور 10',
+                '11': 'الدور 11'
+            };
+
+            for (const [value, text] of Object.entries(floorOptions)) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = text;
+                floorSelect.appendChild(option);
+            }
+        }
+
+        // تحديث خيارات الشقة/المخزن بناءً على الدور المختار
+        function updateUnitOptions() {
+            const selectedFloor = floorSelect.value;
+            unitSelect.innerHTML = ''; // مسح الخيارات السابقة
+            
+            if (selectedFloor) {
+                const units = floorMap[selectedFloor];
+                units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit;
+                    option.textContent = unit;
+                    unitSelect.appendChild(option);
+                });
+                unitSelect.disabled = false;
+                unitSelect.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                unitSelect.classList.add('bg-white', 'cursor-pointer');
+            } else {
+                unitSelect.disabled = true;
+                unitSelect.classList.add('bg-gray-100', 'cursor-not-allowed');
+                unitSelect.classList.remove('bg-white', 'cursor-pointer');
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'اختر الدور أولاً';
+                option.disabled = true;
+                option.selected = true;
+                unitSelect.appendChild(option);
+            }
+        }
+
+        // عرض رسالة (نجاح/خطأ)
+        function showMessage(text, type = 'success') {
+            messageBox.textContent = text;
+            messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-100', 'text-green-700');
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-100', 'text-red-700');
+            }
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        // دالة لإضافة ساكن جديد
+        async function addResident(event) {
+            event.preventDefault();
+            const submitButton = document.getElementById('submit-button');
+            submitButton.disabled = true;
+            submitButton.textContent = 'جاري التسجيل...';
+
+            try {
+                const name = document.getElementById('resident-name').value.trim();
+                const phone = document.getElementById('phone-number').value.trim();
+                const floorValue = floorSelect.value;
+                const unit = unitSelect.value;
+
+                if (!name || !phone || !floorValue || !unit) {
+                    showMessage('الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
+                    return;
+                }
+
+                // تحويل قيمة الدور الإنجليزية إلى العربية للعرض
+                const floorText = floorSelect.options[floorSelect.selectedIndex].textContent;
+
+                const residentData = {
+                    name: name,
+                    phone: phone,
+                    floor: floorText,
+                    unit: unit,
+                    timestamp: serverTimestamp(),
+                    registeredBy: auth.currentUser.uid,
+                };
+
+                const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
+                await addDoc(collection(db, collectionPath), residentData);
+
+                showMessage('تم تسجيل الساكن بنجاح! ننتظر تحديث القائمة.', 'success');
+                registrationForm.reset();
+                // إعادة تعيين قائمة الشقق
+                floorSelect.value = '';
+                updateUnitOptions();
+
+
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                showMessage('حدث خطأ أثناء عملية التسجيل: ' + e.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'تسجيل ساكن جديد';
+            }
+        }
+
+        // دالة لعرض قائمة السكان في الوقت الفعلي
+        function setupRealtimeListener() {
+            const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
+            const q = query(collection(db, collectionPath));
+
+            // الاستماع للتحديثات
+            onSnapshot(q, (snapshot) => {
+                let residentsHtml = '';
+                const residentsArray = [];
+
+                snapshot.forEach((doc) => {
+                    // إضافة معرف المستند (ID) للتمكن من حذف السجل لاحقًا
+                    residentsArray.push({ id: doc.id, ...doc.data() });
+                });
+
+                // فرز السكان حسب الوقت (الأحدث أولاً)
+                residentsArray.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+                if (residentsArray.length === 0) {
+                    residentsList.innerHTML = '<p class="text-gray-500 text-center">لا توجد سجلات سكان حتى الآن.</p>';
+                    return;
+                }
+
+                residentsArray.forEach(resident => {
+                    const phoneLink = `tel:${resident.phone}`;
+                    residentsHtml += `
+                        <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center transition duration-150 hover:bg-gray-100">
+                            <div>
+                                <p class="text-lg font-semibold text-gray-900">${resident.name}</p>
+                                <p class="text-sm text-indigo-600 font-medium">${resident.floor} - ${resident.unit}</p>
+                                <a href="${phoneLink}" class="text-sm text-gray-600 hover:text-indigo-500 transition duration-150">${resident.phone}</a>
+                            </div>
+                            <!-- زر حذف السجل (اختياري لكن مفيد للإدارة) -->
+                            <button data-id="${resident.id}" class="delete-btn text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100" title="حذف السجل">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                });
+
+                residentsList.innerHTML = residentsHtml;
+                // إضافة معالج حدث لأزرار الحذف
+                residentsList.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', deleteResident);
+                });
+            }, (error) => {
+                console.error("Error listening to residents list: ", error);
+                residentsList.innerHTML = `<p class="text-red-500 text-center">خطأ في تحميل البيانات: ${error.message}</p>`;
+            });
+        }
+
+        // دالة لحذف ساكن
+        async function deleteResident(event) {
+            const residentId = event.currentTarget.getAttribute('data-id');
+            if (!confirm('هل أنت متأكد من حذف سجل هذا الساكن؟')) { // استخدام تأكيد بسيط لضرورات الإدارة
+                return;
+            }
+
+            try {
+                const docRef = doc(db, `/artifacts/${appId}/public/data/tower2_residents`, residentId);
+                await deleteDoc(docRef);
+                showMessage('تم حذف السجل بنجاح.', 'success');
+            } catch (e) {
+                console.error("Error deleting document: ", e);
+                showMessage('حدث خطأ أثناء حذف السجل: ' + e.message, 'error');
+            }
+        }
+
+        // التهيئة وبدء التشغيل
+        async function initializeAppAndAuth() {
+            try {
+                // تسجيل الدخول باستخدام التوكن المخصص أو تسجيل الدخول كمجهول
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                const userId = auth.currentUser?.uid || crypto.randomUUID();
+                userIdDisplay.textContent = userId;
+
+                // ملء خيارات الدور
+                populateFloorOptions();
+
+                // إضافة معالجات الأحداث
+                floorSelect.addEventListener('change', updateUnitOptions);
+                registrationForm.addEventListener('submit', addResident);
+
+                // بدء الاستماع لقائمة السكان
+                setupRealtimeListener();
+
+            } catch (e) {
+                console.error("Firebase Initialization Error:", e);
+                showMessage(`خطأ في تهيئة النظام: ${e.message}. تأكد من إعدادات Firebase.`, 'error');
+            }
+        }
+
+        // تشغيل التطبيق بعد تحميل الصفحة
+        window.onload = initializeAppAndAuth;
+
+    </script>
+</body>
+</html>
