@@ -89,19 +89,24 @@
         // IMPORTANT: The global variables __app_id and __firebase_config are provided by the canvas environment.
         // We MUST use them for correct operation.
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const firebaseConfig = {
 
-        // User-provided configuration (for reference, the one above is used)
-        /*
-        const providedConfig = {
-          apiKey: "AIzaSyA3kHexcWgAh_7jqHbgWp-QX8Nj5bFb9s8",
-          authDomain: "kawther2.firebaseapp.com",
-          projectId: "kawther2",
-          storageBucket: "kawther2.firebasestorage.app",
-          messagingSenderId: "497467173741",
-          appId: "1:497467173741:web:6450bd989d8ce273338864",
-          measurementId: "G-W5LE13JCYG"
-        };
+  apiKey: "AIzaSyA3kHexcWgAh_7jqHbgWp-QX8Nj5bFb9s8",
+
+  authDomain: "kawther2.firebaseapp.com",
+
+  projectId: "kawther2",
+
+  storageBucket: "kawther2.firebasestorage.app",
+
+  messagingSenderId: "497467173741",
+
+  appId: "1:497467173741:web:6450bd989d8ce273338864",
+
+  measurementId: "G-W5LE13JCYG"
+
+};
+
         */
         
         // Firebase Instances
@@ -338,3 +343,4 @@
     </script>
 </body>
 </html>
+
