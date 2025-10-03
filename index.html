@@ -91,32 +91,32 @@
         // إعدادات Firebase العامة
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        let isMockMode = false; // متغير لتحديد ما إذا كنا نستخدم الإعدادات الوهمية
 
-        // **التعديل لحل مشكلة عدم توفر .projectId**
-        // نستخدم تكوين وهمي كخطة بديلة إذا لم تكن البيانات الحقيقية متاحة (كما يحدث الآن)
+        // معالجة تكوين Firebase (Firebase Config)
         let firebaseConfig;
+        const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+        
         try {
-            // محاولة قراءة التكوين الحقيقي
-            const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
             firebaseConfig = configString ? JSON.parse(configString) : null;
         } catch (e) {
-            console.error("Error parsing firebase config, using mock data.", e);
+            console.error("Error parsing firebase config, assuming mock data is needed.", e);
             firebaseConfig = null;
         }
 
-        // إذا كان التكوين الحقيقي غير صالح أو مفقود (بما في ذلك عدم وجود projectId)، استخدم تكوينًا وهميًا
+        // إذا كان التكوين الحقيقي غير موجود أو غير صالح، استخدم تكوينًا وهميًا
         if (!firebaseConfig || !firebaseConfig.projectId) {
-            console.warn("Using mock Firebase config to avoid .projectId error.");
+            isMockMode = true;
+            console.warn("Using mock Firebase config. Firestore actions will not be persistent.");
             firebaseConfig = {
-                apiKey: "mock-api-key",
+                apiKey: "mock-api-key", // مفتاح API وهمي
                 authDomain: "mock-domain.firebaseapp.com",
-                projectId: "mock-project-id", // هذا هو الحقل الذي كان مفقودًا
+                projectId: "mock-project-id", 
                 storageBucket: "mock-domain.appspot.com",
                 messagingSenderId: "1234567890",
                 appId: "1:1234567890:web:mock-app-id"
             };
         }
-        // نهاية التعديل لحل مشكلة .projectId
 
         let app; 
         let db, auth;
@@ -168,6 +168,12 @@
                 showMessage('النظام غير مهيأ بعد. يرجى الانتظار قليلاً.', 'error');
                 return;
             }
+            
+            // منع الإرسال إذا كنا في وضع وهمي (لتجنب الأخطاء عند محاولة الكتابة)
+            if (isMockMode) {
+                 showMessage('وضع العرض: لا يمكن حفظ البيانات في وضع الإعدادات الوهمية. يرجى استخدام البيئة الصحيحة.', 'error');
+                 return;
+            }
 
             submitButton.disabled = true;
             submitButton.textContent = 'جاري التسجيل...';
@@ -216,6 +222,11 @@
         // --- وظائف إدارة النافذة المنبثقة (Modal) ---
 
         function showDeleteModal(residentId, residentName) {
+            if (isMockMode) {
+                 showMessage('وضع العرض: لا يمكن حذف البيانات في وضع الإعدادات الوهمية.', 'error');
+                 return;
+            }
+
             residentIdToDelete = residentId;
             residentNameToDeleteDisplay.textContent = residentName;
 
@@ -249,7 +260,7 @@
         // دالة لتنفيذ عملية الحذف بعد التأكيد من النافذة المنبثقة
         async function deleteResidentConfirmed() {
             const residentId = residentIdToDelete;
-            if (!residentId) return;
+            if (!residentId || isMockMode) return; // منع الحذف في الوضع الوهمي
 
             // تعطيل زر التأكيد لمنع النقرات المزدوجة أثناء العملية
             confirmDeleteBtn.disabled = true;
@@ -273,6 +284,13 @@
         // دالة لعرض قائمة السكان في الوقت الفعلي
         function setupRealtimeListener() {
             if (!isAuthReady) return; // لا تبدأ الاستماع إلا بعد المصادقة
+            
+            if (isMockMode) {
+                // في وضع العرض الوهمي، لا يمكننا الاستماع إلى Firestore
+                loadingIndicator.classList.remove('hidden');
+                loadingIndicator.textContent = 'وضع العرض: لا يمكن الاتصال بقاعدة البيانات. لن يعمل التسجيل.';
+                return;
+            }
 
             const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
             const q = query(collection(db, collectionPath));
@@ -286,7 +304,6 @@
                 const residentsArray = [];
 
                 snapshot.forEach((doc) => {
-                    // إضافة معرف المستند (ID) للتمكن من حذف السجل لاحقًا
                     residentsArray.push({ id: doc.id, ...doc.data() });
                 });
 
@@ -301,16 +318,13 @@
                 residentsArray.forEach(resident => {
                     const phoneLink = `tel:${resident.phone}`;
                     
-                    // إذا كان السجل القديم يحتوي على الدور والشقة، فقم بعرضهما بشكل اختياري
                     const unitInfo = resident.floor && resident.unit 
                         ? `<p class="text-sm text-indigo-600 font-medium">الوحدة: ${resident.floor} - ${resident.unit}</p>`
                         : '';
 
-                    // تنسيق وقت التسجيل
                     let timestampText = '';
                     if (resident.timestamp && resident.timestamp.seconds) {
                         const date = new Date(resident.timestamp.seconds * 1000);
-                        // تنسيق التاريخ والوقت بالتنسيق المحلي العربي
                         timestampText = date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                     }
                     
@@ -320,7 +334,6 @@
                                 <p class="text-lg font-semibold text-gray-900">${resident.name}</p>
                                 ${unitInfo}
                                 <a href="${phoneLink}" class="text-sm text-gray-600 hover:text-indigo-500 transition duration-150">${resident.phone}</a>
-                                <!-- عرض وقت التسجيل إذا توفر -->
                                 ${timestampText ? `<p class="text-xs text-gray-400 mt-1">تم التسجيل: ${timestampText}</p>` : ''}
                             </div>
                             <!-- زر حذف السجل (يفتح النافذة المنبثقة) -->
@@ -353,19 +366,23 @@
                 auth = getAuth(app);
                 
                 // 2. محاولة تسجيل الدخول
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
+                // ** التعديل لمنع المصادقة إذا كنا في الوضع الوهمي (لتجنب الخطأ api-key-not-valid) **
+                let userId = 'غير مصادق (وضع وهمي)';
+                if (!isMockMode) {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    userId = auth.currentUser?.uid || 'غير مصادق';
                 }
-
+                
                 // 3. تأكيد المصادقة وتحديث الواجهة
-                const userId = auth.currentUser?.uid || 'غير مصادق';
                 userIdDisplay.textContent = userId;
                 isAuthReady = true;
 
                 // تفعيل زر التسجيل
-                submitButton.disabled = false;
+                submitButton.disabled = isMockMode; // تعطيله إذا كان الوضع وهميًا
                 
                 // 4. إضافة معالجات الأحداث
                 registrationForm.addEventListener('submit', addResident);
@@ -382,6 +399,10 @@
 
                 // 5. بدء الاستماع لقائمة السكان
                 setupRealtimeListener();
+
+                if (isMockMode) {
+                    showMessage('خطأ: لا يوجد اتصال بقاعدة بيانات حقيقية. تم تفعيل وضع العرض الوهمي. لن يتم حفظ أو عرض البيانات.', 'error');
+                }
 
             } catch (e) {
                 console.error("Firebase Initialization Error (Critical):", e);
