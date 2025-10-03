@@ -3,420 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل سكان برج 2 الأوقاف</title>
-    <!-- تحميل Tailwind CSS -->
+    <title>حفظ البيانات في Firestore</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- استخدام خط Cairo كنص افتراضي -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        /* تعيين خط Inter وبعض الأنماط الأساسية */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
-            font-family: 'Cairo', 'Inter', sans-serif;
-            background-color: #f0f4f8;
-        }
-        .container {
-            max-width: 600px;
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f9;
         }
     </style>
 </head>
-<body class="p-4 sm:p-8">
+<body>
 
-    <div id="app" class="container mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10 border border-gray-200">
-        <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6 border-b pb-3">سجل سكان برج 2 الأوقاف</h1>
+    <div class="max-w-4xl mx-auto p-6 md:p-10">
+        <!-- البطاقة الرئيسية للتطبيق -->
+        <div class="bg-white shadow-2xl rounded-xl p-6 lg:p-8">
+            <h1 class="text-3xl font-extrabold text-blue-800 mb-4 border-b pb-2">💾 حفظ بيانات المستخدم (Firestore)</h1>
+            <p class="text-gray-600 mb-6">هذا التطبيق يوضح كيفية حفظ البيانات الخاصة بك في Firestore واسترجاعها في الوقت الفعلي.</p>
 
-        <!-- رسالة النظام -->
-        <div id="message-box" class="hidden p-3 mb-4 rounded-lg text-center font-medium transition duration-300" role="alert"></div>
+            <!-- حالة التحميل والخطأ -->
+            <div id="loading-message" class="bg-yellow-100 border-r-4 border-yellow-500 text-yellow-700 p-4 rounded mb-6 hidden">
+                جاري تهيئة Firebase وتسجيل الدخول...
+            </div>
+            <!-- تم إخفاء رسالة الخطأ الافتراضية عند البدء -->
+            <div id="error-message" class="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 rounded mb-6 hidden">
+                حدث خطأ في التهيئة أو الاتصال.
+            </div>
 
-        <!-- معلومات المستخدم -->
-        <div class="text-xs text-gray-500 mb-4 text-left border-b pb-2">
-            <p>معرّف التطبيق: <span id="app-id-display" class="font-mono text-gray-700">...</span></p>
-            <p>معرّف المستخدم: <span id="user-id-display" class="font-mono text-gray-700 break-all">...</span></p>
+            <!-- عرض معلومات المستخدم -->
+            <div id="user-info-section" class="bg-blue-50 p-4 rounded-lg mb-8 shadow-inner hidden">
+                <p class="text-sm font-semibold text-blue-700 mb-2">معلومات الحساب:</p>
+                <p class="text-xs break-all">
+                    <span class="font-bold text-gray-700">معرّف التطبيق (App ID):</span> <span id="app-id-display" class="font-mono text-gray-600"></span>
+                </p>
+                <p class="text-xs break-all">
+                    <span class="font-bold text-gray-700">معرّف المستخدم (User ID):</span> <span id="user-id-display" class="font-mono text-gray-600"></span>
+                </p>
+            </div>
+
+            <!-- قسم حفظ البيانات -->
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">أدخل بياناتك:</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="userName" class="block text-sm font-medium text-gray-700">الاسم:</label>
+                    <input type="text" id="userName" placeholder="أدخل اسمك هنا"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-blue-500 focus:ring-blue-500 transition duration-150">
+                </div>
+                <div>
+                    <label for="userEmail" class="block text-sm font-medium text-gray-700">البريد الإلكتروني:</label>
+                    <input type="email" id="userEmail" placeholder="أدخل بريدك الإلكتروني"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-blue-500 focus:ring-blue-500 transition duration-150">
+                </div>
+                <button id="saveButton"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300 transform hover:scale-[1.01]"
+                        disabled>
+                    حفظ البيانات
+                </button>
+            </div>
+
+            <!-- قسم البيانات المحفوظة -->
+            <h2 class="text-2xl font-bold text-gray-800 mt-10 mb-4">البيانات المحفوظة حاليًا (تحديث تلقائي):</h2>
+            <div id="saved-data-card" class="bg-green-50 p-6 rounded-xl border border-green-300 shadow-md">
+                <p id="savedName" class="text-lg font-semibold text-gray-800 mb-2">الاسم المحفوظ: <span class="text-green-700 font-bold">... لا يوجد بيانات ...</span></p>
+                <p id="savedEmail" class="text-lg font-semibold text-gray-800">البريد المحفوظ: <span class="text-green-700 font-bold">... لا يوجد بيانات ...</span></p>
+            </div>
+
         </div>
+    </div>
 
-        <form id="registration-form" class="space-y-6">
-            <!-- اسم الساكن -->
-            <div>
-                <label for="resident-name" class="block text-sm font-medium text-gray-700">اسم الساكن</label>
-                <input type="text" id="resident-name" required placeholder="أدخل الاسم كاملاً"
-                        class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
-            </div>
-
-            <!-- رقم الهاتف -->
-            <div>
-                <label for="phone-number" class="block text-sm font-medium text-gray-700">رقم الهاتف</label>
-                <input type="tel" id="phone-number" required placeholder="أدخل رقم الهاتف (مثال: 05xxxxxxxxx)"
-                        class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
-            </div>
-
-            <!-- زر التسجيل -->
-            <button type="submit" id="submit-button"
-                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 disabled:bg-indigo-300 disabled:cursor-not-allowed"
-                    disabled>
-                تسجيل ساكن جديد
+    <!-- Custom Modal for Alerts/Errors (Replaces alert()) -->
+    <div id="customModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full transform transition-all">
+            <h3 id="modalTitle" class="text-xl font-bold mb-3 text-gray-800"></h3>
+            <p id="modalMessage" class="text-gray-600 mb-6"></p>
+            <button id="modalCloseButton" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+                حسناً
             </button>
-        </form>
-
-        <div class="mt-10 pt-6 border-t border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">قائمة السكان المسجلين</h2>
-            <div id="residents-list" class="space-y-3">
-                <p class="text-gray-500 text-center" id="loading-indicator">جاري تحميل قائمة السكان...</p>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Custom Confirmation Modal (حوار التأكيد المخصص) -->
-    <div id="delete-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 hidden transition-opacity duration-300 opacity-0">
-        <div id="modal-content" class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all duration-300 scale-95 opacity-0">
-            <h3 class="text-xl font-bold text-red-600 mb-4">تأكيد الحذف</h3>
-            <p class="text-gray-700 mb-6">
-                هل أنت متأكد من أنك تريد حذف السجل الخاص بـ "<span id="resident-name-to-delete" class="font-bold text-gray-900"></span>"؟ لا يمكن التراجع عن هذا الإجراء.
-            </p>
-            <div class="flex justify-end space-x-3 rtl:space-x-reverse">
-                <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition duration-150">
-                    إلغاء
-                </button>
-                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium shadow-md hover:bg-red-700 transition duration-150">
-                    تأكيد الحذف
-                </button>
-            </div>
         </div>
     </div>
 
-    <!-- Firebase SDKs and Logic -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // إعدادات Firebase العامة
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        let isMockMode = false; // متغير لتحديد ما إذا كنا نستخدم الإعدادات الوهمية
-
-        // معالجة تكوين Firebase (Firebase Config)
-        let firebaseConfig;
-        const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+        // =========================================================================
+        // === تم تحديث الإعدادات هنا باستخدام البيانات التي قدمتها لمشروع kawther2 ===
+        // =========================================================================
         
-        try {
-            firebaseConfig = configString ? JSON.parse(configString) : null;
-        } catch (e) {
-            console.error("Error parsing firebase config, assuming mock data is needed.", e);
-            firebaseConfig = null;
-        }
+        // إعدادات مشروعك الحقيقية
+        const firebaseConfigManual = {
+            apiKey: "AIzaSyA3kHexcWgAh_7jqHbgWp-QX8Nj5bFb9s8",
+            authDomain: "kawther2.firebaseapp.com",
+            projectId: "kawther2",
+            storageBucket: "kawther2.firebasestorage.app",
+            messagingSenderId: "497467173741",
+            appId: "1:497467173741:web:6450bd989d8ce273338864",
+            measurementId: "G-W5LE13JCYG" // Measurement ID is optional for initialization
+        };
+        
+        // متغيرات البيئة الخاصة بـ Canvas (يتم استخدامها إذا توفرت، وإلا يتم استخدام الإعدادات اليدوية)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfigManual.projectId; 
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfigManual;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // إذا كان التكوين الحقيقي غير موجود أو غير صالح، استخدم تكوينًا وهميًا
-        if (!firebaseConfig || !firebaseConfig.projectId) {
-            isMockMode = true;
-            console.warn("Using mock Firebase config. Firestore actions will not be persistent.");
-            firebaseConfig = {
-                apiKey: "mock-api-key", // مفتاح API وهمي
-                authDomain: "mock-domain.firebaseapp.com",
-                projectId: "mock-project-id", 
-                storageBucket: "mock-domain.appspot.com",
-                messagingSenderId: "1234567890",
-                appId: "1:1234567890:web:mock-app-id"
-            };
-        }
+        let app;
+        let db;
+        let auth;
+        let currentUserId = null;
+        let isAuthReady = false;
 
-        let app; 
-        let db, auth;
-        let isAuthReady = false; 
-
-        // قم بتعيين مستوى تسجيل الدخول لتصحيح الأخطاء
-        setLogLevel('Debug');
-
-        // عناصر الواجهة
-        const registrationForm = document.getElementById('registration-form');
-        const residentsList = document.getElementById('residents-list');
-        const messageBox = document.getElementById('message-box');
+        const loadingMessage = document.getElementById('loading-message');
+        const errorMessage = document.getElementById('error-message');
+        const saveButton = document.getElementById('saveButton');
         const appIdDisplay = document.getElementById('app-id-display');
         const userIdDisplay = document.getElementById('user-id-display');
-        const submitButton = document.getElementById('submit-button');
-        const loadingIndicator = document.getElementById('loading-indicator');
+        const userInfoSection = document.getElementById('user-info-section');
+        const savedNameDisplay = document.getElementById('savedName').querySelector('span');
+        const savedEmailDisplay = document.getElementById('savedEmail').querySelector('span');
         
-        // عناصر النافذة المنبثقة (Modal)
-        const deleteModal = document.getElementById('delete-modal');
-        const modalContent = document.getElementById('modal-content');
-        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-        const residentNameToDeleteDisplay = document.getElementById('resident-name-to-delete');
+        // Modal Elements
+        const customModal = document.getElementById('customModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalCloseButton = document.getElementById('modalCloseButton');
 
-        let residentIdToDelete = null; 
-
-        appIdDisplay.textContent = appId;
-
-        // عرض رسالة (نجاح/خطأ)
-        function showMessage(text, type = 'success') {
-            messageBox.textContent = text;
-            messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
-
-            if (type === 'success') {
-                messageBox.classList.add('bg-green-100', 'text-green-700');
-            } else if (type === 'error') {
-                messageBox.classList.add('bg-red-100', 'text-red-700');
+        // Function to show the custom modal (replaces alert)
+        function showModal(title, message, isError = false) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            
+            // Customize style based on error status
+            if (isError) {
+                modalTitle.classList.remove('text-gray-800');
+                modalTitle.classList.add('text-red-600');
+                modalCloseButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                modalCloseButton.classList.add('bg-red-600', 'hover:bg-red-700');
+            } else {
+                modalTitle.classList.remove('text-red-600');
+                modalTitle.classList.add('text-gray-800');
+                modalCloseButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                modalCloseButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
             }
-            setTimeout(() => {
-                messageBox.classList.add('hidden');
-            }, 5000);
+
+            customModal.classList.remove('hidden');
         }
 
-        // دالة لإضافة ساكن جديد
-        async function addResident(event) {
-            event.preventDefault();
+        function hideModal() {
+            customModal.classList.add('hidden');
+        }
+        
+        // Attach listener to close button
+        modalCloseButton.addEventListener('click', hideModal);
 
-            if (!isAuthReady) {
-                showMessage('النظام غير مهيأ بعد. يرجى الانتظار قليلاً.', 'error');
+
+        // --- 1. INITIALIZATION AND AUTHENTICATION ---
+        async function initializeFirebase() {
+            loadingMessage.textContent = "جاري تهيئة Firebase...";
+            loadingMessage.classList.remove('hidden');
+
+            // التحقق مما إذا كانت إعدادات Firebase مفقودة أو وهمية
+            if (!firebaseConfig || firebaseConfig.projectId === "your-project-id") {
+                console.error("Firebase config is missing or using placeholder. Cannot initialize.");
+                loadingMessage.classList.add('hidden');
+                errorMessage.textContent = "خطأ في الاتصال: إعدادات Firebase مفقودة. يرجى التأكد من توفرها.";
+                errorMessage.classList.remove('hidden');
+                saveButton.disabled = true;
                 return;
             }
-            
-            // منع الإرسال إذا كنا في وضع وهمي (لتجنب الأخطاء عند محاولة الكتابة)
-            if (isMockMode) {
-                 showMessage('وضع العرض: لا يمكن حفظ البيانات في وضع الإعدادات الوهمية. يرجى استخدام البيئة الصحيحة.', 'error');
-                 return;
-            }
-
-            submitButton.disabled = true;
-            submitButton.textContent = 'جاري التسجيل...';
 
             try {
-                const name = document.getElementById('resident-name').value.trim();
-                const phone = document.getElementById('phone-number').value.trim();
+                // Initialize services
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-                // التحقق من الحقول المطلوبة (الاسم ورقم الهاتف فقط)
-                if (!name || !phone) {
-                    showMessage('الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
-                    return;
+                // Display App ID
+                appIdDisplay.textContent = appId;
+
+                loadingMessage.textContent = "جاري تسجيل الدخول (تسجيل دخول مجهول)...";
+
+                // استخدام signInAnonymously() لضمان عمل المصادقة على GitHub Pages
+                // ويستخدم signInWithCustomToken() في بيئة Canvas التلقائية
+                let userCredential;
+                if (initialAuthToken) {
+                    userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    userCredential = await signInAnonymously(auth);
                 }
                 
-                // التأكد من وجود مستخدم مصادق
-                const currentUserId = auth.currentUser?.uid;
-                if (!currentUserId) {
-                    console.error("Authentication Error: Current user is null.");
-                    showMessage('خطأ في المصادقة. يرجى إعادة تحميل الصفحة.', 'error');
-                    return;
-                }
+                currentUserId = userCredential.user.uid;
+                userIdDisplay.textContent = currentUserId;
+                userInfoSection.classList.remove('hidden');
+                isAuthReady = true;
 
-                const residentData = {
-                    name: name,
-                    phone: phone,
-                    timestamp: serverTimestamp(),
-                    registeredBy: currentUserId,
-                };
+                loadingMessage.classList.add('hidden');
+                saveButton.disabled = false;
+                
+                console.log("Firebase initialized and user signed in:", currentUserId);
 
-                // حفظ البيانات في مسار البيانات العامة المشتركة
-                const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
-                await addDoc(collection(db, collectionPath), residentData);
+                // Start listening for data changes
+                setupRealtimeListener();
 
-                showMessage('تم تسجيل الساكن بنجاح! ننتظر تحديث القائمة.', 'success');
-                registrationForm.reset();
-
-            } catch (e) {
-                console.error("Error adding document to Firestore: ", e);
-                showMessage('حدث خطأ أثناء عملية التسجيل: ' + e.message, 'error');
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'تسجيل ساكن جديد';
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                loadingMessage.classList.add('hidden');
+                errorMessage.textContent = `خطأ في التهيئة: ${error.message}`;
+                errorMessage.classList.remove('hidden');
+                saveButton.disabled = true;
+                showModal("خطأ في التهيئة", error.message, true); // Use modal for error
             }
         }
 
-        // --- وظائف إدارة النافذة المنبثقة (Modal) ---
+        // --- 2. FIREBASE FIRETORE PATH & SETUP ---
 
-        function showDeleteModal(residentId, residentName) {
-            if (isMockMode) {
-                 showMessage('وضع العرض: لا يمكن حذف البيانات في وضع الإعدادات الوهمية.', 'error');
-                 return;
-            }
+        // Function to get the correct document reference for private user data
+        function getUserDocumentRef(userId) {
+            // Path structure for the user's data: artifacts/{appId}/users/{userId}/my_user_data/profile
+            const finalAppId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
 
-            residentIdToDelete = residentId;
-            residentNameToDeleteDisplay.textContent = residentName;
-
-            // إظهار النافذة المنبثقة
-            deleteModal.classList.remove('hidden');
-            // تطبيق تأثير الدخول (fade/scale in)
-            setTimeout(() => {
-                deleteModal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95', 'opacity-0');
-            }, 10);
+            const collectionPath = `artifacts/${finalAppId}/users/${userId}/my_user_data`;
+            const docId = 'profile'; // Using a fixed document ID for the user's profile
+            return doc(db, collectionPath, docId);
         }
 
-        function hideDeleteModal() {
-            // تطبيق تأثير الخروج (fade/scale out)
-            modalContent.classList.add('scale-95', 'opacity-0');
-            deleteModal.classList.add('opacity-0');
-            setTimeout(() => {
-                deleteModal.classList.add('hidden');
-                residentIdToDelete = null; // مسح المعرّف بعد الإخفاء
-                residentNameToDeleteDisplay.textContent = '';
-            }, 300); // الانتظار حتى انتهاء الانتقال
-        }
+        // Function to save data to Firestore
+        async function saveData() {
+            if (!isAuthReady) return;
 
-        // دالة لحذف ساكن (تقوم الآن بإظهار النافذة المنبثقة للتأكيد)
-        function promptDeleteResident(event) {
-            const residentId = event.currentTarget.getAttribute('data-id');
-            const residentName = event.currentTarget.getAttribute('data-name');
-            showDeleteModal(residentId, residentName);
-        }
+            const nameInput = document.getElementById('userName').value.trim();
+            const emailInput = document.getElementById('userEmail').value.trim();
 
-        // دالة لتنفيذ عملية الحذف بعد التأكيد من النافذة المنبثقة
-        async function deleteResidentConfirmed() {
-            const residentId = residentIdToDelete;
-            if (!residentId || isMockMode) return; // منع الحذف في الوضع الوهمي
-
-            // تعطيل زر التأكيد لمنع النقرات المزدوجة أثناء العملية
-            confirmDeleteBtn.disabled = true;
-            confirmDeleteBtn.textContent = 'جاري الحذف...';
-
-            try {
-                const docRef = doc(db, `/artifacts/${appId}/public/data/tower2_residents`, residentId);
-                await deleteDoc(docRef);
-                showMessage('تم حذف السجل بنجاح.', 'success');
-            } catch (e) {
-                console.error("Error deleting document from Firestore: ", e);
-                showMessage('حدث خطأ أثناء حذف السجل: ' + e.message, 'error');
-            } finally {
-                // إعادة الزر لحالته الأصلية وإخفاء النافذة المنبثقة
-                confirmDeleteBtn.disabled = false;
-                confirmDeleteBtn.textContent = 'تأكيد الحذف';
-                hideDeleteModal(); 
-            }
-        }
-
-        // دالة لعرض قائمة السكان في الوقت الفعلي
-        function setupRealtimeListener() {
-            if (!isAuthReady) return; // لا تبدأ الاستماع إلا بعد المصادقة
-            
-            if (isMockMode) {
-                // في وضع العرض الوهمي، لا يمكننا الاستماع إلى Firestore
-                loadingIndicator.classList.remove('hidden');
-                loadingIndicator.textContent = 'وضع العرض: لا يمكن الاتصال بقاعدة البيانات. لن يعمل التسجيل.';
+            if (!nameInput && !emailInput) {
+                showModal("تنبيه", "الرجاء إدخال الاسم أو البريد الإلكتروني للحفظ."); // Use modal for validation
                 return;
             }
 
-            const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
-            const q = query(collection(db, collectionPath));
+            const profileData = {
+                name: nameInput || "لم يتم تحديد اسم",
+                email: emailInput || "لم يتم تحديد بريد إلكتروني",
+                lastUpdated: new Date().toISOString()
+            };
 
-            // إخفاء مؤشر التحميل
-            loadingIndicator.classList.add('hidden');
+            const docRef = getUserDocumentRef(currentUserId);
 
-            // الاستماع للتحديثات
-            onSnapshot(q, (snapshot) => {
-                let residentsHtml = '';
-                const residentsArray = [];
+            try {
+                // setDoc will create the document if it doesn't exist, or overwrite it if it does
+                await setDoc(docRef, profileData);
+                console.log("Document successfully written!");
+                saveButton.textContent = "تم الحفظ بنجاح! ✅";
+                setTimeout(() => saveButton.textContent = "حفظ البيانات", 2000);
+            } catch (e) {
+                console.error("Error writing document: ", e);
+                showModal("خطأ في الحفظ", `حدث خطأ أثناء حفظ البيانات: ${e.message}`, true); // Use modal for error
+            }
+        }
 
-                snapshot.forEach((doc) => {
-                    residentsArray.push({ id: doc.id, ...doc.data() });
-                });
+        // Function to set up a real-time listener for the saved data
+        function setupRealtimeListener() {
+            if (!isAuthReady) return;
 
-                // فرز السكان حسب الوقت (الأحدث أولاً)
-                residentsArray.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            const docRef = getUserDocumentRef(currentUserId);
 
-                if (residentsArray.length === 0) {
-                    residentsList.innerHTML = '<p class="text-gray-500 text-center">لا توجد سجلات سكان حتى الآن.</p>';
-                    return;
+            // onSnapshot listens for real-time changes
+            onSnapshot(docRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    console.log("Current data:", data);
+                    
+                    // Update the UI with the real-time data
+                    savedNameDisplay.textContent = data.name || 'لا يوجد';
+                    savedEmailDisplay.textContent = data.email || 'لا يوجد';
+                    document.getElementById('userName').value = data.name || '';
+                    document.getElementById('userEmail').value = data.email || '';
+                } else {
+                    console.log("No such document for this user!");
+                    savedNameDisplay.textContent = '... لا يوجد بيانات ...';
+                    savedEmailDisplay.textContent = '... لا يوجد بيانات ...';
+                    // Clear inputs if data doesn't exist
+                    document.getElementById('userName').value = '';
+                    document.getElementById('userEmail').value = '';
                 }
-
-                residentsArray.forEach(resident => {
-                    const phoneLink = `tel:${resident.phone}`;
-                    
-                    const unitInfo = resident.floor && resident.unit 
-                        ? `<p class="text-sm text-indigo-600 font-medium">الوحدة: ${resident.floor} - ${resident.unit}</p>`
-                        : '';
-
-                    let timestampText = '';
-                    if (resident.timestamp && resident.timestamp.seconds) {
-                        const date = new Date(resident.timestamp.seconds * 1000);
-                        timestampText = date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    }
-                    
-                    residentsHtml += `
-                        <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center transition duration-150 hover:bg-gray-100">
-                            <div>
-                                <p class="text-lg font-semibold text-gray-900">${resident.name}</p>
-                                ${unitInfo}
-                                <a href="${phoneLink}" class="text-sm text-gray-600 hover:text-indigo-500 transition duration-150">${resident.phone}</a>
-                                ${timestampText ? `<p class="text-xs text-gray-400 mt-1">تم التسجيل: ${timestampText}</p>` : ''}
-                            </div>
-                            <!-- زر حذف السجل (يفتح النافذة المنبثقة) -->
-                            <button data-id="${resident.id}" data-name="${resident.name}" class="delete-btn text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100" title="حذف السجل">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M16.5 4.478A.75.75 0 0117.25 4v2.25H20a.75.75 0 010 1.5h-.255l-.763 8.375A2.75 2.75 0 0116.5 21h-9A2.75 2.75 0 014.268 18.125l-.764-8.375H4.5a.75.75 0 010-1.5h2.75V4a.75.75 0 011.5 0v2.25h5.5V4a.75.75 0 01.75-.75zM12 9a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0112 9zM9.75 9.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM14.25 9.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                        </div>
-                    `;
-                });
-
-                residentsList.innerHTML = residentsHtml;
-                // إضافة معالج حدث لأزرار الحذف
-                residentsList.querySelectorAll('.delete-btn').forEach(button => {
-                    button.addEventListener('click', promptDeleteResident);
-                });
             }, (error) => {
-                console.error("Error listening to residents list: ", error);
-                residentsList.innerHTML = `<p class="text-red-500 text-center">خطأ في تحميل البيانات: ${error.message}</p>`;
+                console.error("Firestore listener error:", error);
+                errorMessage.textContent = `خطأ في الاستماع للبيانات: ${error.message}`;
+                errorMessage.classList.remove('hidden');
+                showModal("خطأ في الاستماع", `حدث خطأ أثناء تحديث البيانات: ${error.message}`, true);
             });
         }
 
-        // التهيئة وبدء التشغيل
-        async function initializeAppAndAuth() {
-            try {
-                // 1. التهيئة الأولية
-                app = initializeApp(firebaseConfig); 
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // 2. محاولة تسجيل الدخول
-                // ** التعديل لمنع المصادقة إذا كنا في الوضع الوهمي (لتجنب الخطأ api-key-not-valid) **
-                let userId = 'غير مصادق (وضع وهمي)';
-                if (!isMockMode) {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    userId = auth.currentUser?.uid || 'غير مصادق';
-                }
-                
-                // 3. تأكيد المصادقة وتحديث الواجهة
-                userIdDisplay.textContent = userId;
-                isAuthReady = true;
+        // Event Listeners
+        saveButton.addEventListener('click', saveData);
 
-                // تفعيل زر التسجيل
-                submitButton.disabled = isMockMode; // تعطيله إذا كان الوضع وهميًا
-                
-                // 4. إضافة معالجات الأحداث
-                registrationForm.addEventListener('submit', addResident);
-
-                // معالجات أحداث النافذة المنبثقة
-                cancelDeleteBtn.addEventListener('click', hideDeleteModal);
-                confirmDeleteBtn.addEventListener('click', deleteResidentConfirmed);
-                // إغلاق النافذة المنبثقة عند النقر على الخلفية
-                deleteModal.addEventListener('click', (e) => {
-                    if (e.target === deleteModal) {
-                        hideDeleteModal();
-                    }
-                });
-
-                // 5. بدء الاستماع لقائمة السكان
-                setupRealtimeListener();
-
-                if (isMockMode) {
-                    showMessage('خطأ: لا يوجد اتصال بقاعدة بيانات حقيقية. تم تفعيل وضع العرض الوهمي. لن يتم حفظ أو عرض البيانات.', 'error');
-                }
-
-            } catch (e) {
-                console.error("Firebase Initialization Error (Critical):", e);
-                // إظهار رسالة خطأ حرجة وإبقاء زر الإرسال معطلاً
-                showMessage(`خطأ في تهيئة النظام. لن يعمل التسجيل: ${e.message}`, 'error');
-                loadingIndicator.textContent = 'فشل تحميل البيانات بسبب خطأ في النظام.';
-                loadingIndicator.classList.remove('hidden');
-                submitButton.disabled = true;
-            }
-        }
-
-        // تشغيل التطبيق بعد تحميل الصفحة
-        window.onload = initializeAppAndAuth;
-
+        // Start the application
+        initializeFirebase();
     </script>
 </body>
 </html>
