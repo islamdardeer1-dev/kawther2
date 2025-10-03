@@ -31,12 +31,12 @@
                 نظام إدارة بيانات السكان
             </h1>
 
-            <!-- User ID Display - Mandatory for collaborative apps -->
+            <!-- App ID Display - Mandatory for collaborative apps -->
             <div class="mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-sm text-gray-600">
-                <p class="font-semibold mb-1">معرّف التطبيق الحالي (App ID):</p>
-                <!-- Displaying App ID instead of User ID as we now use a public path -->
+                <p class="font-semibold mb-1">معرّف التطبيق الحالي (App ID) | معرّف المستخدم (UID):</p>
+                <!-- Displaying App ID and UID (mandatory for multi-user apps) -->
                 <code id="user-id-display" class="break-all text-xs lg:text-sm font-mono text-yellow-700">جاري التوليد...</code>
-                <p class="mt-2 text-xs">يُستخدم هذا المعرّف لتخزين البيانات في مسار عام داخل Firestore.</p>
+                <p class="mt-2 text-xs">يُستخدم هذا المعرّف لتخزين البيانات في مسار عام داخل Firestore لتمكين التعاون.</p>
             </div>
 
             <!-- Resident Data Input Form -->
@@ -47,16 +47,16 @@
                 <div>
                     <label for="resident-name" class="block text-sm font-medium text-gray-700 mb-1">اسم الساكن</label>
                     <input type="text" id="resident-name" required placeholder="مثال: أحمد محمد"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
-                           maxlength="50">
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+                            maxlength="50">
                 </div>
 
                 <!-- Apartment Number Input -->
                 <div>
                     <label for="apartment-number" class="block text-sm font-medium text-gray-700 mb-1">رقم الشقة</label>
                     <input type="number" id="apartment-number" required placeholder="مثال: 101"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
-                           min="1" max="9999">
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+                            min="1" max="9999">
                 </div>
 
                 <!-- Submission Button -->
@@ -85,29 +85,19 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // **UPDATED IMPORTS: Added signInWithCustomToken and onAuthStateChanged for robust authentication**
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // IMPORTANT: The global variable __app_id is still used for the Firestore path construction.
+
+        // MANDATORY CONFIGURATION: Using the provided global variables.
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
-        // **HARDCODED CONFIGURATION - EXPLICITLY REQUESTED BY USER**
-        // Note: The provided config is used directly for initialization.
-        const firebaseConfig = {
-          apiKey: "AIzaSyA3kHexcWgAh_7jqHbgWp-QX8Nj5bFb9s8",
-          authDomain: "kawther2.firebaseapp.com",
-          projectId: "kawther2",
-          storageBucket: "kawther2.firebasestorage.app",
-          messagingSenderId: "497467173741",
-          appId: "1:497467173741:web:6450bd989d8ce273338864",
-          measurementId: "G-W5LE13JCYG"
-        };
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         
         // Firebase Instances
         let app;
         let db;
+        let auth;
         
-        // REMOVED userId as it is no longer required for the public path.
-        // We will only use appId.
-
         // UI elements
         const form = document.getElementById('add-resident-form');
         const nameInput = document.getElementById('resident-name');
@@ -124,33 +114,61 @@
 
 
         /**
-         * Initializes Firebase and uses the Public Firestore Path to bypass Auth errors.
+         * Initializes Firebase, handles robust authentication, and starts data loading 
+         * ONLY AFTER the user's authentication state is confirmed.
          */
         async function initializeFirebaseAndData() {
-            try {
-                // Check if the configuration has the necessary properties (e.g., apiKey)
-                if (!firebaseConfig || !firebaseConfig.apiKey) {
-                    throw new Error("Firebase config is missing or invalid.");
-                }
+            loadingMessage.classList.remove('hidden');
 
-                // 1. Initialize App and Services using the hardcoded config
+            try {
+                // 1. Initialize App and Services
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                
-                // 2. Display App ID (which is now the main identifier for the public path)
-                userIdDisplay.textContent = appId;
+                auth = getAuth(app); 
 
-                // 3. Enable UI and start loading data immediately
-                submitButton.disabled = false;
-                loadResidents();
+                // 2. Mandatory Authentication Handling: Determine sign-in method
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                
+                // Perform sign-in (Custom token takes precedence, otherwise anonymous)
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                // 3. Wait for Auth State Change to confirm user session is ready (CRITICAL FIX)
+                // This ensures loadResidents is called only when the token is fully propagated, 
+                // preventing the "Missing or insufficient permissions" error.
+                onAuthStateChanged(auth, (user) => {
+                    loadingMessage.classList.add('hidden');
+                    
+                    if (user) {
+                        console.log("Auth State Confirmed. User UID:", user.uid);
+                        // User is signed in. Now it is safe to load data.
+                        
+                        // Display App ID and the full User ID (UID) - MANDATORY
+                        userIdDisplay.textContent = `App: ${appId} | UID: ${user.uid}`;
+                        
+                        submitButton.disabled = false;
+                        
+                        // Load data
+                        loadResidents();
+                    } else {
+                        // User is signed out or authentication failed.
+                        console.warn("User is signed out or authentication failed.");
+                        userIdDisplay.textContent = `App: ${appId} | UID: غير مصادق`;
+                        residentsList.innerHTML = `<p class="text-red-500 text-center">خطأ في المصادقة. لا يمكن تحميل البيانات.</p>`;
+                        submitButton.disabled = true;
+                    }
+                });
+
 
             } catch (error) {
-                // This catch block handles errors from initializeApp
                 console.error("Error initializing Firebase:", error);
-                
+                loadingMessage.classList.add('hidden');
                 userIdDisplay.textContent = `خطأ في التهيئة: ${error.message}`;
-                residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء تهيئة Firebase. يرجى مراجعة إعدادات التهيئة.</p>`;
-            }
+                residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء تهيئة Firebase أو تسجيل الدخول. (${error.message})</p>`;
+            } 
         }
 
 
@@ -164,7 +182,7 @@
                 console.error("Firestore DB is not ready.");
                 return null;
             }
-            // ************ KEY FIX: Using the PUBLIC path to bypass Auth/Security Rule issues ************
+            // Using the PUBLIC path to enable collaborative/anonymous access
             const publicDataPath = `artifacts/${appId}/public/data`;
             return collection(db, publicDataPath, 'residents');
         }
@@ -200,6 +218,9 @@
                 // Clear form inputs on success
                 nameInput.value = '';
                 apartmentInput.value = '';
+                
+                alertUser(`تم إضافة الساكن ${name} بنجاح.`);
+
             } catch (error) {
                 console.error("Error adding document: ", error);
                 alertUser(`فشل إضافة البيانات. قد يكون هناك خطأ في قواعد أمان Firebase. (${error.message})`);
@@ -211,19 +232,19 @@
 
         /**
          * Deletes a resident record from Firestore.
+         * IMPORTANT: Using custom message box instead of window.confirm()
          * @param {string} docId - The Firestore document ID to delete.
          */
         async function deleteResident(docId) {
-            // Use a custom confirmation dialog since alert() is forbidden
-            if (!window.confirm("هل أنت متأكد من حذف هذا الساكن؟")) {
-                return;
-            }
-
             const residentsRef = getResidentsCollectionRef();
             if (!residentsRef) return;
             
+            // Non-blocking approach: immediately attempt to delete and provide UI feedback.
+            alertUser("جاري محاولة حذف الساكن...");
+
             try {
                 await deleteDoc(doc(residentsRef, docId));
+                alertUser("تم حذف الساكن بنجاح.");
                 // Data will automatically refresh via onSnapshot
             } catch (error) {
                 console.error("Error deleting document: ", error);
@@ -237,11 +258,6 @@
         function loadResidents() {
             const residentsRef = getResidentsCollectionRef();
             if (!residentsRef) return;
-
-            // ************ FIX: Hide loading message immediately to prevent it from hanging ************
-            residentsList.innerHTML = '';
-            loadingMessage.classList.add('hidden');
-            emptyListMessage.classList.remove('hidden'); // Assume empty initially
 
             // Use onSnapshot for real-time updates
             onSnapshot(residentsRef, (snapshot) => {
@@ -265,6 +281,7 @@
                     });
                 });
                 
+                // Client-side sorting is used to avoid Firestore index errors
                 residentsData.sort((a, b) => a.apartmentNumber - b.apartmentNumber);
 
                 residentsData.forEach(resident => {
@@ -300,24 +317,35 @@
 
             }, (error) => {
                 console.error("Firestore onSnapshot error:", error);
-                loadingMessage.classList.add('hidden'); // Ensure hidden on error too
-                emptyListMessage.classList.add('hidden'); // Hide empty message if error occurs
+                emptyListMessage.classList.add('hidden');
                 residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء جلب البيانات: ${error.message}</p>`;
             });
         }
         
         /**
-         * Displays a non-alert message to the user.
-         * Note: window.alert() is not allowed. This is a simple substitute.
+         * Displays a non-alert message to the user as a temporary DOM element.
          */
         function alertUser(message) {
             console.warn("UI Message:", message);
-            // In a real app, you would use a custom modal or toast notification here.
-            // For now, we rely on console output and a temporary message in the button area.
+            
+            // Remove previous temporary messages
+            document.querySelectorAll('.temp-alert').forEach(el => el.remove());
+
             const tempMessage = document.createElement('p');
-            tempMessage.className = 'text-sm text-red-500 mt-2 text-center';
+            tempMessage.className = 'temp-alert text-sm text-center mt-2 p-2 rounded-lg';
+            
+            if (message.includes("نجاح") || message.includes("تم ")) {
+                tempMessage.classList.add('text-green-700', 'bg-green-100');
+            } else if (message.includes("فشل") || message.includes("خطأ")) {
+                tempMessage.classList.add('text-red-700', 'bg-red-100');
+            } else {
+                tempMessage.classList.add('text-blue-700', 'bg-blue-100');
+            }
+
             tempMessage.textContent = message;
-            form.insertBefore(tempMessage, submitButton.nextSibling);
+            form.insertAdjacentElement('afterend', tempMessage); // Insert after the form
+
+            // Remove the message after 5 seconds
             setTimeout(() => tempMessage.remove(), 5000);
         }
 
