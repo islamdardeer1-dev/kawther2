@@ -3,63 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سجل السكان - قاعدة بيانات سحابية</title>
+    <title>إدارة برج 2 الأوقاف - نظام شامل</title>
     <!-- تحميل Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- ضبط الخط الافتراضي لـ Inter وتفعيل نمط RTL -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
         body {
             font-family: 'Cairo', sans-serif;
             background-color: #f7f9fb;
         }
+        /* تصميم النافذة المنبثقة (Modal) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        /* تصميم زر التبويبات النشط - تم التحديث لـ text-lg و font-extrabold */
+        .tab-btn {
+            @apply px-4 py-2 text-lg font-extrabold rounded-lg transition duration-200;
+        }
+        .tab-btn.active {
+            @apply bg-indigo-600 text-white shadow-md;
+        }
+        .tab-btn:not(.active) {
+            @apply text-indigo-700 bg-indigo-100 hover:bg-indigo-200;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <div id="app-container" class="max-w-4xl mx-auto bg-white shadow-xl rounded-xl p-6 md:p-10 border border-gray-200">
-        <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6 border-b-2 pb-3 border-indigo-100">سجل بيانات السكان</h1>
+    <div id="app-container" class="max-w-7xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 border border-gray-200">
+        <h1 class="text-3xl font-extrabold text-center text-indigo-700 mb-6 border-b-4 pb-3 border-indigo-200">إدارة برج 2 الأوقاف</h1>
 
-        <!-- معلومات المستخدم والتحميل -->
-        <div id="status" class="mb-4 p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border-l-4 border-blue-400">
+        <!-- معلومات المستخدم وحالة التحميل -->
+        <!-- تم إخفاؤه حسب الطلب السابق -->
+        <div id="status" class="mb-6 p-3 bg-blue-50 text-blue-800 rounded-xl text-sm border-l-4 border-blue-400 hidden">
             <p id="auth-status">جاري التحقق من حالة المستخدم...</p>
             <p id="user-id-display" class="mt-1 text-xs opacity-75"></p>
         </div>
 
-        <!-- نموذج إضافة ساكن جديد -->
-        <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">إضافة ساكن جديد</h2>
-            <form id="add-resident-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" id="name-input" placeholder="الاسم الكامل" required
-                       class="col-span-1 md:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+        <!-- أزرار التبويبات (Navigation Tabs) -->
+        <nav class="flex flex-wrap gap-2 md:gap-4 mb-8 justify-center border-b pb-4">
+            <button data-view="residents" class="tab-btn active">بيانات السكان</button>
+            <button data-view="expenses" class="tab-btn">تسجيل المصروفات</button>
+            <button data-view="revenues" class="tab-btn">تسجيل الإيرادات</button>
+            <button data-view="report" class="tab-btn">التقرير المالي الشهري</button>
+        </nav>
+
+        <!-- ******************************************** -->
+        <!-- 1. عرض بيانات السكان (RESIDENTS VIEW) -->
+        <!-- ******************************************** -->
+        <div id="residents-view" class="view-container">
+            <!-- نموذج إضافة ساكن جديد -->
+            <div class="mb-10 p-6 bg-gray-50 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">إضافة ساكن جديد</h2>
+                <form id="add-resident-form" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <input type="text" id="name-input" placeholder="الاسم الكامل" required
+                        class="col-span-2 md:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                    <input type="tel" id="phone-input" placeholder="رقم الهاتف" required pattern="[0-9]+"
+                        class="col-span-2 md:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                    <input type="number" id="apartment-input" placeholder="رقم الشقة" required min="1"
+                        class="col-span-2 md:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                    <button type="submit" id="submit-button" disabled
+                            class="col-span-2 md:col-span-1 bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 disabled:bg-indigo-300 transition duration-200 shadow-md hover:shadow-lg">
+                        إضافة الساكن
+                    </button>
+                </form>
+                <div id="form-message" class="mt-3 text-sm text-red-600 hidden font-medium"></div>
+            </div>
+
+            <!-- قائمة السكان (التقرير) -->
+            <div class="mt-10">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b">تقرير بيانات السكان (<span id="residents-count">0</span>)</h2>
                 
-                <input type="tel" id="phone-input" placeholder="رقم الهاتف (مثال: 0501234567)" required pattern="[0-9]+"
-                       class="col-span-1 md:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
-                
-                <button type="submit" id="submit-button" disabled
-                        class="col-span-1 md:col-span-1 bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 disabled:bg-indigo-300 transition duration-200 shadow-md hover:shadow-lg">
-                    إضافة الساكن
-                </button>
-            </form>
-            <div id="form-message" class="mt-3 text-sm text-red-600 hidden"></div>
+                <!-- رأس التقرير (Header) -->
+                <div id="report-header" class="grid grid-cols-12 gap-2 text-sm font-bold text-gray-600 p-3 bg-gray-100 rounded-t-xl sticky top-0 border-b border-gray-300 hidden md:grid">
+                    <div class="col-span-4">الاسم / الهاتف</div>
+                    <div class="col-span-2 text-center">الشقة</div>
+                    <div class="col-span-2 text-center">الدور</div>
+                    <div class="col-span-2 text-center">تاريخ التسجيل / التحديث</div>
+                    <div class="col-span-2 text-center">الإجراءات</div>
+                </div>
+
+                <div id="residents-list" class="space-y-3">
+                    <p id="loading-list" class="text-center text-gray-500 mt-4 p-4 text-lg">جاري تحميل البيانات...</p>
+                </div>
+                <p id="empty-list" class="text-center text-gray-500 mt-4 hidden p-4 text-lg">لا يوجد سكان مسجلون بعد.</p>
+            </div>
         </div>
 
-        <!-- قائمة السكان -->
-        <div class="mt-10">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b">السكان المسجلون (<span id="residents-count">0</span>)</h2>
-            <div id="residents-list" class="space-y-3">
-                <!-- سيتم عرض بيانات السكان هنا -->
-                <p id="loading-list" class="text-center text-gray-500 mt-4">جاري تحميل البيانات...</p>
+        <!-- ******************************************** -->
+        <!-- 2. عرض تسجيل المصروفات (EXPENSES VIEW) -->
+        <!-- ******************************************** -->
+        <div id="expenses-view" class="view-container hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b-2">تسجيل المصروفات</h2>
+            <div class="p-6 bg-red-50 rounded-xl shadow-lg border border-red-200 mb-8">
+                <form id="add-expense-form" class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                    
+                    <input type="text" id="expense-description" placeholder="وصف المصروف" required
+                        class="col-span-2 md:col-span-1 p-3 border border-red-300 rounded-lg focus:ring-red-500 focus:border-red-500 transition duration-150">
+                    
+                    <input type="number" id="expense-amount" placeholder="المبلغ (وحدة نقدية)" required min="0.01" step="0.01"
+                        class="col-span-2 md:col-span-1 p-3 border border-red-300 rounded-lg focus:ring-red-500 focus:border-red-500 transition duration-150">
+
+                    <input type="date" id="expense-date" required
+                        class="col-span-2 md:col-span-1 p-3 border border-red-300 rounded-lg focus:ring-red-500 focus:border-red-500 transition duration-150">
+                    
+                    <button type="submit" id="expense-submit-button" disabled
+                            class="col-span-2 md:col-span-1 bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 disabled:bg-red-300 transition duration-200 shadow-md">
+                        إضافة مصروف
+                    </button>
+                </form>
+                <div id="expense-message" class="mt-3 text-sm text-red-600 hidden font-medium"></div>
             </div>
-            <p id="empty-list" class="text-center text-gray-500 mt-4 hidden">لا يوجد سكان مسجلون بعد. ابدأ بإضافة أول ساكن!</p>
+
+            <!-- قائمة المصروفات -->
+            <div class="mt-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">قائمة المصروفات (<span id="expenses-count">0</span>)</h3>
+                <div id="expenses-list" class="space-y-3">
+                    <p class="text-center text-gray-500 mt-4 p-4" id="loading-expenses">جاري تحميل المصروفات...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ******************************************** -->
+        <!-- 3. عرض تسجيل الإيرادات (REVENUES VIEW) -->
+        <!-- ******************************************** -->
+        <div id="revenues-view" class="view-container hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b-2">تسجيل إيرادات (تحصيل الاشتراكات)</h2>
+            <div class="p-6 bg-green-50 rounded-xl shadow-lg border border-green-200 mb-8">
+                <form id="add-revenue-form" class="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                    
+                    <select id="revenue-resident-id" required
+                        class="col-span-2 md:col-span-1 p-3 border border-green-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150">
+                        <option value="" disabled selected>اختر الساكن</option>
+                        <!-- سيتم تعبئة الخيارات من بيانات السكان -->
+                    </select>
+
+                    <input type="number" id="revenue-amount" placeholder="المبلغ المحصل" required min="0.01" step="0.01"
+                        class="col-span-2 md:col-span-1 p-3 border border-green-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150">
+                    
+                    <input type="month" id="revenue-month-period" required title="الشهر الذي يخصه هذا الدفع"
+                        class="col-span-2 md:col-span-1 p-3 border border-green-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150">
+
+                    <input type="date" id="revenue-date" required title="تاريخ التحصيل الفعلي"
+                        class="col-span-2 md:col-span-1 p-3 border border-green-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150">
+                    
+                    <button type="submit" id="revenue-submit-button" disabled
+                            class="col-span-2 md:col-span-1 bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 disabled:bg-green-300 transition duration-200 shadow-md">
+                        تسجيل الإيراد
+                    </button>
+                </form>
+                <div id="revenue-message" class="mt-3 text-sm text-red-600 hidden font-medium"></div>
+            </div>
+
+            <!-- قائمة الإيرادات -->
+            <div class="mt-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">قائمة الإيرادات (<span id="revenues-count">0</span>)</h3>
+                <div id="revenues-list" class="space-y-3">
+                    <p class="text-center text-gray-500 mt-4 p-4" id="loading-revenues">جاري تحميل الإيرادات...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ******************************************** -->
+        <!-- 4. عرض التقرير المالي الشهري (REPORT VIEW) -->
+        <!-- ******************************************** -->
+        <div id="report-view" class="view-container hidden">
+            <h2 class="text-2xl font-extrabold text-indigo-700 mb-4 pb-2 border-b-2 border-indigo-200">التقرير المالي الشهري والمراجعة</h2>
+            
+            <div class="bg-indigo-50 p-6 rounded-xl shadow-inner mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <label for="report-month-selector" class="text-lg font-semibold text-indigo-800">اختر شهر التقرير:</label>
+                    <input type="month" id="report-month-selector" required
+                        class="p-2 border border-indigo-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="text-sm font-bold text-gray-700">
+                    <p>قيمة الاشتراك الشهري المعتمدة: <span id="monthly-fee-display" class="text-green-600 text-lg">---</span></p>
+                </div>
+            </div>
+
+            <div id="report-results" class="space-y-6">
+                <p id="report-loading" class="text-center text-gray-500 p-8 text-xl hidden">جاري حساب التقرير...</p>
+                <div id="report-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- سيتم تعبئة ملخص الإيرادات والمصروفات وصافي الحساب هنا -->
+                </div>
+
+                <div class="mt-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">تفاصيل مديونية السكان للشهر المحدد</h3>
+                    <div id="debt-report-list" class="space-y-3">
+                        <p class="text-center text-gray-500 p-4">الرجاء اختيار شهر لعرض تقرير المديونيات.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    
+    <!-- النافذة المنبثقة للتعديل (Edit Modal) -->
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all scale-100" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <h3 id="modal-title" class="text-xl font-bold text-indigo-700 mb-6 border-b pb-2">تعديل بيانات الساكن</h3>
+            <form id="edit-resident-form" class="space-y-4">
+                
+                <input type="hidden" id="edit-id">
+
+                <div>
+                    <label for="edit-name" class="block text-sm font-medium text-gray-700">الاسم الكامل</label>
+                    <input type="text" id="edit-name" required
+                           class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                </div>
+
+                <div>
+                    <label for="edit-phone" class="block text-sm font-medium text-gray-700">رقم الهاتف</label>
+                    <input type="tel" id="edit-phone" required pattern="[0-9]+"
+                           class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                </div>
+
+                <div>
+                    <label for="edit-apartment" class="block text-sm font-medium text-gray-700">رقم الشقة</label>
+                    <input type="number" id="edit-apartment" required min="1"
+                           class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                </div>
+                <p id="edit-floor-display" class="text-sm text-indigo-600 font-bold">الدور المحسوب: --</p>
+                <div id="edit-message" class="text-sm text-red-600 font-medium hidden"></div>
+
+                <div class="flex justify-end space-x-3 space-x-reverse pt-4">
+                    <button type="button" id="close-modal-btn"
+                            class="px-4 py-2 text-sm font-bold border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-150">
+                        إلغاء
+                    </button>
+                    <button type="submit" id="save-edit-btn"
+                            class="px-4 py-2 text-sm font-bold bg-green-500 text-white rounded-lg hover:bg-green-600 transition duration-150 shadow-md">
+                        حفظ التعديلات
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
+
 
     <!-- Firebase SDKs -->
     <script type="module">
         // استيراد وظائف Firebase المطلوبة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, setLogLevel, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, setLogLevel, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // **********************************************
         // 1. تهيئة وثوابت Firebase
@@ -93,215 +290,617 @@
 
         let isAuthReady = false;
         let userId = null;
-        let unsubscribe = null; // للاحتفاظ بوظيفة إلغاء الاشتراك في onSnapshot
+        let unsubscribeResidents = null;
+        let unsubscribeExpenses = null;
+        let unsubscribeRevenues = null;
 
-        // العناصر الأساسية في DOM
+        // ثوابت ومخازن بيانات
+        const SHAPPU_PER_FLOOR = 8; // ثابت لحساب الدور
+        const MONTHLY_FEE = 100; // القيمة الافتراضية للاشتراك الشهري (100 وحدة نقدية)
+        let allResidents = []; // مخزن لجميع بيانات السكان
+        let allExpenses = [];   // مخزن لجميع بيانات المصروفات
+        let allRevenues = [];  // مخزن لجميع بيانات الإيرادات
+        let currentView = 'residents';
+
+        // **********************************************
+        // 2. العناصر الأساسية في DOM
+        // **********************************************
+        
+        // الأقسام الرئيسية
+        const viewContainers = {
+            residents: document.getElementById('residents-view'),
+            expenses: document.getElementById('expenses-view'),
+            revenues: document.getElementById('revenues-view'),
+            report: document.getElementById('report-view'),
+        };
+        const tabButtons = document.querySelectorAll('.tab-btn');
+
+        // حالة المصادقة (مخفية في HTML)
+        const statusDiv = document.getElementById('status'); 
+        const authStatus = document.getElementById('auth-status');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        // بيانات السكان (Residents View)
         const form = document.getElementById('add-resident-form');
         const nameInput = document.getElementById('name-input');
         const phoneInput = document.getElementById('phone-input');
+        const apartmentInput = document.getElementById('apartment-input'); 
         const submitButton = document.getElementById('submit-button');
         const residentsList = document.getElementById('residents-list');
         const loadingList = document.getElementById('loading-list');
         const emptyList = document.getElementById('empty-list');
-        const authStatus = document.getElementById('auth-status');
-        const userIdDisplay = document.getElementById('user-id-display');
         const formMessage = document.getElementById('form-message');
         const residentsCount = document.getElementById('residents-count');
+        const reportHeader = document.getElementById('report-header'); 
+        const editModal = document.getElementById('edit-modal');
+        const editForm = document.getElementById('edit-resident-form');
+        const editIdInput = document.getElementById('edit-id');
+        const editNameInput = document.getElementById('edit-name');
+        const editPhoneInput = document.getElementById('edit-phone');
+        const editApartmentInput = document.getElementById('edit-apartment');
+        const editFloorDisplay = document.getElementById('edit-floor-display');
+        const editMessage = document.getElementById('edit-message');
+        const closeEditModalBtn = document.getElementById('close-modal-btn');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+
+        // المصروفات (Expenses View)
+        const expenseForm = document.getElementById('add-expense-form');
+        const expenseDescriptionInput = document.getElementById('expense-description');
+        const expenseAmountInput = document.getElementById('expense-amount');
+        const expenseDateInput = document.getElementById('expense-date');
+        const expenseSubmitButton = document.getElementById('expense-submit-button');
+        const expenseMessage = document.getElementById('expense-message');
+        const expensesCount = document.getElementById('expenses-count');
+        const expensesList = document.getElementById('expenses-list');
+        const loadingExpenses = document.getElementById('loading-expenses');
+
+        // الإيرادات (Revenues View)
+        const revenueForm = document.getElementById('add-revenue-form');
+        const revenueResidentSelect = document.getElementById('revenue-resident-id');
+        const revenueAmountInput = document.getElementById('revenue-amount');
+        const revenueMonthPeriodInput = document.getElementById('revenue-month-period');
+        const revenueDateInput = document.getElementById('revenue-date');
+        const revenueSubmitButton = document.getElementById('revenue-submit-button');
+        const revenueMessage = document.getElementById('revenue-message');
+        const revenuesCount = document.getElementById('revenues-count');
+        const revenuesList = document.getElementById('revenues-list');
+        const loadingRevenues = document.getElementById('loading-revenues');
+
+        // التقرير (Report View)
+        const monthlyFeeDisplay = document.getElementById('monthly-fee-display');
+        const reportMonthSelector = document.getElementById('report-month-selector');
+        const reportLoading = document.getElementById('report-loading');
+        const reportSummary = document.getElementById('report-summary');
+        const debtReportList = document.getElementById('debt-report-list');
 
         // **********************************************
-        // 2. وظائف مساعدة
+        // 3. وظائف مساعدة
         // **********************************************
 
         /**
          * بناء مسار مجموعة Firestore (لبيانات عامة/مشتركة)
+         * @param {string} collectionName اسم المجموعة ('residents', 'expenses', 'revenues')
          * @returns {string} المسار الكامل للمجموعة
          */
-        function getCollectionPath() {
+        function getCollectionPath(collectionName) {
             // المسار العام: /artifacts/{appId}/public/data/{collectionName}
-            return `artifacts/${appId}/public/data/residents`;
+            return `artifacts/${appId}/public/data/${collectionName}`;
         }
 
         /**
          * عرض رسالة خطأ مؤقتة في النموذج
          * @param {string} message رسالة الخطأ
+         * @param {HTMLElement} element العنصر لعرض الرسالة فيه
          */
-        function showFormError(message) {
-            formMessage.textContent = message;
-            formMessage.classList.remove('hidden');
+        function showFormError(message, element) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+            // بما أن عنصر الحالة مخفي، لن تظهر هذه الرسائل في قسم الحالة
             setTimeout(() => {
-                formMessage.classList.add('hidden');
+                element.classList.add('hidden');
             }, 5000);
         }
 
+        /**
+         * تنسيق التاريخ من ISO string إلى تنسيق محلي قصير
+         * @param {string} isoString
+         * @returns {string}
+         */
+        function formatRegistrationDate(isoString) {
+            if (!isoString) return 'N/A';
+            try {
+                const date = new Date(isoString);
+                const options = { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true, 
+                    timeZoneName: 'short' 
+                };
+                return date.toLocaleTimeString('ar-EG', options);
+            } catch (e) {
+                return 'تاريخ غير صالح';
+            }
+        }
+        
+        /**
+         * تنسيق رقم المبلغ (عملة)
+         * @param {number} amount
+         * @returns {string}
+         */
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('ar-EG', { 
+                style: 'decimal', 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            }).format(amount);
+        }
+
+        /**
+         * تفعيل عرض معين بناءً على الزر المضغوط
+         * @param {string} viewName اسم العرض (residents, expenses, revenues, report)
+         */
+        function switchView(viewName) {
+            currentView = viewName;
+            
+            // إخفاء جميع الأقسام
+            Object.values(viewContainers).forEach(container => container.classList.add('hidden'));
+            
+            // إظهار القسم المطلوب
+            if (viewContainers[viewName]) {
+                viewContainers[viewName].classList.remove('hidden');
+            }
+
+            // تحديث حالة الأزرار
+            tabButtons.forEach(btn => {
+                if (btn.getAttribute('data-view') === viewName) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // تحديث التقرير إذا تم التبديل إلى قسم التقرير
+            if (viewName === 'report') {
+                const currentMonth = reportMonthSelector.value;
+                if (currentMonth) {
+                    generateMonthlyReport(currentMonth);
+                }
+            }
+        }
+
+        // إعداد مستمعي أحداث التبويبات
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => switchView(btn.getAttribute('data-view')));
+        });
+
+
         // **********************************************
-        // 3. المصادقة والاستماع لحالة المستخدم
+        // 4. المصادقة والاستماع لحالة المستخدم
         // **********************************************
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // المستخدم قام بتسجيل الدخول
                 userId = user.uid;
                 authStatus.textContent = 'تم تسجيل الدخول بنجاح.';
                 userIdDisplay.textContent = `معرّف المستخدم: ${userId}`;
                 isAuthReady = true;
-                submitButton.disabled = false;
                 
-                // بدء الاستماع للبيانات بمجرد جاهزية المصادقة
-                setupRealtimeListener();
+                statusDiv.classList.remove('bg-red-100', 'text-red-800', 'border-red-500');
+                statusDiv.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-400');
+                
+                // تفعيل جميع أزرار الإرسال
+                [submitButton, expenseSubmitButton, revenueSubmitButton].forEach(btn => btn.disabled = false);
 
+                setupRealtimeListeners();
             } else {
-                // المستخدم غير مسجل الدخول، محاولة المصادقة
                 authStatus.textContent = 'جاري تسجيل الدخول...';
                 try {
                     if (initialAuthToken) {
-                        // استخدام رمز مميز مخصص إذا كان متوفراً
                         await signInWithCustomToken(auth, initialAuthToken);
                     } else {
-                        // تسجيل الدخول كمستخدم مجهول
                         const anonymousUser = await signInAnonymously(auth);
                         userId = anonymousUser.user.uid;
                         authStatus.textContent = 'تم تسجيل الدخول كمستخدم مجهول.';
                         userIdDisplay.textContent = `معرّف المستخدم: ${userId}`;
                         isAuthReady = true;
-                        submitButton.disabled = false;
                         
-                        // بدء الاستماع للبيانات بعد تسجيل الدخول
-                        setupRealtimeListener();
+                        // تفعيل جميع أزرار الإرسال
+                        [submitButton, expenseSubmitButton, revenueSubmitButton].forEach(btn => btn.disabled = false);
+                        
+                        setupRealtimeListeners();
                     }
                 } catch (error) {
                     console.error("Authentication failed:", error);
+                    statusDiv.classList.remove('bg-blue-50', 'text-blue-800', 'border-blue-400');
+                    statusDiv.classList.add('bg-red-100', 'text-red-800', 'border-red-500');
+
                     authStatus.textContent = `فشل المصادقة: ${error.message}`;
-                    userId = 'anonymous'; // تعيين معرف مؤقت
+                    userId = 'anonymous';
                     isAuthReady = true;
-                    // لا يمكن التشغيل بدون مصادقة، إبقاء الزر معطلاً إذا كانت القاعدة تتطلب مصادقة
-                    submitButton.disabled = true;
+                    // تعطيل جميع أزرار الإرسال عند فشل المصادقة
+                    [submitButton, expenseSubmitButton, revenueSubmitButton].forEach(btn => btn.disabled = true);
                 }
             }
+            // إعداد الشهر الافتراضي للتقرير ليكون الشهر الحالي
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            reportMonthSelector.value = `${year}-${month}`;
+            monthlyFeeDisplay.textContent = `${formatCurrency(MONTHLY_FEE)}`;
         });
 
         // **********************************************
-        // 4. وظيفة الحذف
+        // 5. إدارة البيانات في Firestore (CRUD & Listeners)
         // **********************************************
-        
-        /**
-         * حذف سجل ساكن من Firestore
-         * @param {string} docId معرّف المستند المراد حذفه
-         */
-        async function deleteResident(docId) {
-            if (!isAuthReady) {
-                showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة.");
-                return;
-            }
 
-            try {
-                const docRef = doc(db, getCollectionPath(), docId);
-                await deleteDoc(docRef);
-                // لا حاجة لتحديث القائمة يدوياً، onSnapshot سيقوم بذلك
-                console.log("Document successfully deleted!");
-            } catch (error) {
-                console.error("Error removing document: ", error);
-                showFormError(`فشل حذف السجل: ${error.message}`);
-            }
+        /**
+         * وظيفة واحدة لجمع وإدارة جميع المستمعين لـ Firestore
+         */
+        function setupRealtimeListeners() {
+            if (!isAuthReady) return;
+
+            // 5.1. مستمع بيانات السكان
+            if (unsubscribeResidents) unsubscribeResidents();
+            const residentsQuery = query(collection(db, getCollectionPath('residents')));
+            unsubscribeResidents = onSnapshot(residentsQuery, (querySnapshot) => {
+                allResidents = [];
+                querySnapshot.forEach((doc) => {
+                    allResidents.push({ id: doc.id, ...doc.data() });
+                });
+                allResidents.sort((a, b) => (a.apartmentNumber || 0) - (b.apartmentNumber || 0));
+                renderResidents(allResidents);
+                populateResidentSelect(allResidents); // تحديث قائمة السكان في نموذج الإيرادات
+                if (currentView === 'report' && reportMonthSelector.value) {
+                    generateMonthlyReport(reportMonthSelector.value);
+                }
+            }, (error) => {
+                console.error("Error getting residents: ", error);
+                loadingList.textContent = `حدث خطأ أثناء تحميل بيانات السكان: ${error.message}`;
+            });
+
+            // 5.2. مستمع بيانات المصروفات
+            if (unsubscribeExpenses) unsubscribeExpenses();
+            const expensesQuery = query(collection(db, getCollectionPath('expenses')));
+            unsubscribeExpenses = onSnapshot(expensesQuery, (querySnapshot) => {
+                allExpenses = [];
+                querySnapshot.forEach((doc) => {
+                    allExpenses.push({ id: doc.id, ...doc.data() });
+                });
+                allExpenses.sort((a, b) => new Date(b.date) - new Date(a.date)); // فرز حسب التاريخ الأحدث
+                renderExpenses(allExpenses);
+                if (currentView === 'report' && reportMonthSelector.value) {
+                    generateMonthlyReport(reportMonthSelector.value);
+                }
+            }, (error) => {
+                console.error("Error getting expenses: ", error);
+                loadingExpenses.textContent = `حدث خطأ أثناء تحميل المصروفات: ${error.message}`;
+            });
+
+            // 5.3. مستمع بيانات الإيرادات
+            if (unsubscribeRevenues) unsubscribeRevenues();
+            const revenuesQuery = query(collection(db, getCollectionPath('revenues')));
+            unsubscribeRevenues = onSnapshot(revenuesQuery, (querySnapshot) => {
+                allRevenues = [];
+                querySnapshot.forEach((doc) => {
+                    allRevenues.push({ id: doc.id, ...doc.data() });
+                });
+                allRevenues.sort((a, b) => new Date(b.collectionDate) - new Date(a.collectionDate)); // فرز حسب التاريخ الأحدث
+                renderRevenues(allRevenues);
+                if (currentView === 'report' && reportMonthSelector.value) {
+                    generateMonthlyReport(reportMonthSelector.value);
+                }
+            }, (error) => {
+                console.error("Error getting revenues: ", error);
+                loadingRevenues.textContent = `حدث خطأ أثناء تحميل الإيرادات: ${error.message}`;
+            });
         }
 
         // **********************************************
-        // 5. وظيفة عرض البيانات (onSnapshot)
+        // 6. وظائف عرض الرسوم البيانية (RENDER FUNCTIONS)
         // **********************************************
 
+        // 6.1. عرض بيانات السكان
         function renderResidents(residentsData) {
             residentsList.innerHTML = '';
-            
             residentsCount.textContent = residentsData.length;
 
             if (residentsData.length === 0) {
                 loadingList.classList.add('hidden');
                 emptyList.classList.remove('hidden');
+                reportHeader.classList.add('hidden');
                 return;
             }
 
             emptyList.classList.add('hidden');
             loadingList.classList.add('hidden');
+            reportHeader.classList.remove('hidden');
 
+            // ... (منطق عرض السكان لم يتغير كثيراً - تم الاحتفاظ به من النسخة السابقة)
             residentsData.forEach(resident => {
                 const residentDiv = document.createElement('div');
-                residentDiv.className = 'flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition duration-200';
+                residentDiv.className = 'grid grid-cols-12 gap-2 items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition duration-200 text-sm md:text-base';
+                
+                const displayISO = resident.updatedAt || resident.createdAt;
+                const displayLabel = resident.updatedAt ? 'آخر تحديث' : 'تاريخ التسجيل';
+                const formattedDate = formatRegistrationDate(displayISO);
+                const [datePart, timePart, ampmPart] = formattedDate.split(' ');
+
+
                 residentDiv.innerHTML = `
-                    <div>
-                        <p class="text-lg font-medium text-gray-900">${resident.name}</p>
-                        <p class="text-sm text-gray-500 dir-ltr">${resident.phone}</p>
+                    <div class="col-span-12 md:col-span-4 flex flex-col">
+                        <p class="text-base font-bold text-gray-900">${resident.name}</p>
+                        <p class="text-xs text-gray-500 dir-ltr">${resident.phone}</p>
                     </div>
-                    <button data-id="${resident.id}" 
-                            class="delete-btn bg-red-500 text-white p-2 rounded-full text-xs font-bold hover:bg-red-600 transition duration-150 shadow-sm"
-                            title="حذف السجل">
-                        حذف
-                    </button>
+                    
+                    <div class="col-span-6 md:col-span-2 text-center">
+                        <span class="md:hidden font-semibold text-gray-600">الشقة: </span>
+                        <span class="font-bold text-lg text-indigo-800">${resident.apartmentNumber || 'N/A'}</span>
+                    </div>
+
+                    <div class="col-span-6 md:col-span-2 text-center">
+                        <span class="md:hidden font-semibold text-gray-600">الدور: </span>
+                        <span class="font-bold text-md text-indigo-600">${resident.floorNumber || 'N/A'}</span>
+                    </div>
+                    
+                    <div class="hidden md:flex md:col-span-2 text-center justify-center items-center flex-col">
+                        <span class="text-xs font-semibold text-gray-700 mb-1">${displayLabel}</span>
+                        <span class="text-xs text-gray-500">${datePart}</span>
+                        <span class="text-xs text-gray-500">${timePart} ${ampmPart}</span>
+                    </div>
+
+                    <div class="col-span-12 md:col-span-2 flex justify-center space-x-2 space-x-reverse mt-2 md:mt-0">
+                        <button data-id="${resident.id}" 
+                                data-name="${resident.name}"
+                                data-phone="${resident.phone}"
+                                data-apartment="${resident.apartmentNumber}"
+                                data-floor="${resident.floorNumber}"
+                                class="edit-btn bg-blue-500 text-white p-2 rounded-lg text-xs font-bold hover:bg-blue-600 transition duration-150 shadow-sm w-16">
+                            تعديل
+                        </button>
+                        <button data-id="${resident.id}" 
+                                class="delete-btn bg-red-500 text-white p-2 rounded-lg text-xs font-bold hover:bg-red-600 transition duration-150 shadow-sm w-16">
+                            حذف
+                        </button>
+                    </div>
                 `;
                 residentsList.appendChild(residentDiv);
             });
 
-            // إضافة مستمعي الأحداث لأزرار الحذف
             residentsList.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const docId = e.target.getAttribute('data-id');
-                    
-                    // تم إزالة window.confirm() لأنه لا يعمل في بيئة iframe.
-                    // يتم الحذف مباشرة بعد الضغط على الزر.
-
-                    // منع الضغطات المتعددة أثناء الحذف وعرض حالة مؤقتة
                     e.target.disabled = true;
                     e.target.textContent = '...';
+                    deleteItem(docId, 'residents');
+                });
+            });
 
-                    deleteResident(docId);
-                    
-                    // ملاحظة: onSnapshot ستعيد بناء القائمة بالكامل، مما يعيد تفعيل الزر تلقائياً.
+            residentsList.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const residentData = {
+                        id: e.target.getAttribute('data-id'),
+                        name: e.target.getAttribute('data-name'),
+                        phone: e.target.getAttribute('data-phone'),
+                        apartmentNumber: parseInt(e.target.getAttribute('data-apartment'), 10),
+                        floorNumber: parseInt(e.target.getAttribute('data-floor'), 10),
+                    };
+                    openEditModal(residentData);
+                });
+            });
+        }
+        
+        // 6.2. تعبئة قائمة السكان في نموذج الإيرادات
+        function populateResidentSelect(residentsData) {
+            revenueResidentSelect.innerHTML = '<option value="" disabled selected>اختر الساكن</option>';
+            residentsData.forEach(resident => {
+                const option = document.createElement('option');
+                option.value = resident.id;
+                option.textContent = `${resident.name} (شقة: ${resident.apartmentNumber})`;
+                revenueResidentSelect.appendChild(option);
+            });
+        }
+
+        // 6.3. عرض بيانات المصروفات
+        function renderExpenses(expensesData) {
+            expensesList.innerHTML = '';
+            expensesCount.textContent = expensesData.length;
+
+            if (expensesData.length === 0) {
+                loadingExpenses.textContent = 'لا توجد مصروفات مسجلة.';
+                return;
+            }
+            loadingExpenses.classList.add('hidden');
+
+            expensesData.forEach(expense => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'grid grid-cols-12 gap-2 items-center p-3 bg-white rounded-lg shadow-sm border border-gray-100';
+                
+                itemDiv.innerHTML = `
+                    <div class="col-span-6 md:col-span-4 font-bold text-gray-900">${expense.description}</div>
+                    <div class="col-span-6 md:col-span-3 text-red-600 font-extrabold text-lg dir-ltr text-left">-${formatCurrency(expense.amount)}</div>
+                    <div class="col-span-12 md:col-span-3 text-sm text-gray-500">تاريخ الصرف: ${expense.date}</div>
+                    <div class="col-span-12 md:col-span-2 flex justify-end">
+                        <button data-id="${expense.id}" 
+                                class="delete-expense-btn bg-red-100 text-red-700 p-1 rounded text-xs hover:bg-red-200 transition duration-150">
+                            حذف
+                        </button>
+                    </div>
+                `;
+                expensesList.appendChild(itemDiv);
+            });
+
+            expensesList.querySelectorAll('.delete-expense-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const docId = e.target.getAttribute('data-id');
+                    deleteItem(docId, 'expenses');
                 });
             });
         }
 
-        function setupRealtimeListener() {
-            if (unsubscribe) {
-                unsubscribe(); // إلغاء الاشتراك السابق إذا وجد
+        // 6.4. عرض بيانات الإيرادات
+        function renderRevenues(revenuesData) {
+            revenuesList.innerHTML = '';
+            revenuesCount.textContent = revenuesData.length;
+
+            if (revenuesData.length === 0) {
+                loadingRevenues.textContent = 'لا توجد إيرادات مسجلة.';
+                return;
+            }
+            loadingRevenues.classList.add('hidden');
+
+            revenuesData.forEach(revenue => {
+                // البحث عن اسم الساكن
+                const resident = allResidents.find(r => r.id === revenue.residentId);
+                const residentName = resident ? resident.name : 'ساكن محذوف';
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'grid grid-cols-12 gap-2 items-center p-3 bg-white rounded-lg shadow-sm border border-gray-100';
+                
+                itemDiv.innerHTML = `
+                    <div class="col-span-12 md:col-span-3 font-bold text-gray-900">${residentName}</div>
+                    <div class="col-span-6 md:col-span-2 text-green-600 font-extrabold text-lg dir-ltr text-left">+${formatCurrency(revenue.amount)}</div>
+                    <div class="col-span-6 md:col-span-3 text-sm text-gray-500">يخص شهر: ${revenue.monthPeriod}</div>
+                    <div class="col-span-12 md:col-span-2 text-sm text-gray-500">تاريخ التحصيل: ${revenue.collectionDate}</div>
+                    <div class="col-span-12 md:col-span-2 flex justify-end">
+                        <button data-id="${revenue.id}" 
+                                class="delete-revenue-btn bg-red-100 text-red-700 p-1 rounded text-xs hover:bg-red-200 transition duration-150">
+                            حذف
+                        </button>
+                    </div>
+                `;
+                revenuesList.appendChild(itemDiv);
+            });
+            
+            revenuesList.querySelectorAll('.delete-revenue-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const docId = e.target.getAttribute('data-id');
+                    deleteItem(docId, 'revenues');
+                });
+            });
+        }
+
+
+        // **********************************************
+        // 7. وظائف الحذف والتعديل الموحدة
+        // **********************************************
+
+        /**
+         * حذف سجل من أي مجموعة
+         * @param {string} docId معرّف المستند
+         * @param {string} collectionName اسم المجموعة
+         */
+        async function deleteItem(docId, collectionName) {
+            if (!isAuthReady) {
+                showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة.", formMessage); // استخدام formMessage كافتراضي
+                return;
             }
 
-            if (!isAuthReady) return;
-
-            const residentsQuery = query(collection(db, getCollectionPath()));
-            
-            unsubscribe = onSnapshot(residentsQuery, (querySnapshot) => {
-                const residents = [];
-                querySnapshot.forEach((doc) => {
-                    residents.push({ id: doc.id, ...doc.data() });
-                });
-                // فرز البيانات محلياً حسب الاسم
-                residents.sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
-                renderResidents(residents);
-            }, (error) => {
-                console.error("Error getting documents: ", error);
-                loadingList.textContent = `حدث خطأ أثناء تحميل البيانات: ${error.message}`;
-            });
+            try {
+                const docRef = doc(db, getCollectionPath(collectionName), docId);
+                await deleteDoc(docRef);
+                console.log(`Document from ${collectionName} successfully deleted!`);
+            } catch (error) {
+                console.error(`Error removing document from ${collectionName}: `, error);
+                showFormError(`فشل حذف السجل: ${error.message}`, formMessage);
+            }
         }
 
+        // منطق التعديل للسكان (Edit Modal) - تم الاحتفاظ به مع تحديث اسم المجموعة
+        // ... (منطق openEditModal, input listener, closeEditModalBtn listener)
+        
+        /**
+         * فتح نافذة التعديل ببيانات الساكن
+         */
+        function openEditModal(residentData) {
+            editIdInput.value = residentData.id;
+            editNameInput.value = residentData.name;
+            editPhoneInput.value = residentData.phone;
+            editApartmentInput.value = residentData.apartmentNumber;
+            editFloorDisplay.textContent = `الدور المحسوب: ${residentData.floorNumber}`;
+            editMessage.classList.add('hidden');
+            editModal.classList.remove('hidden');
+        }
+
+        editApartmentInput.addEventListener('input', () => {
+            const apartmentNumber = parseInt(editApartmentInput.value, 10);
+            if (apartmentNumber > 0) {
+                const floorNumber = Math.ceil(apartmentNumber / SHAPPU_PER_FLOOR);
+                editFloorDisplay.textContent = `الدور المحسوب: ${floorNumber}`;
+            } else {
+                editFloorDisplay.textContent = `الدور المحسوب: --`;
+            }
+        });
+
+        closeEditModalBtn.addEventListener('click', () => {
+            editModal.classList.add('hidden');
+        });
+
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const docId = editIdInput.value;
+            const name = editNameInput.value.trim();
+            const phone = editPhoneInput.value.trim();
+            const apartmentNumber = parseInt(editApartmentInput.value, 10);
+
+            if (!name || !phone || isNaN(apartmentNumber) || apartmentNumber < 1) {
+                editMessage.textContent = "يرجى إدخال جميع البيانات بشكل صحيح.";
+                editMessage.classList.remove('hidden');
+                return;
+            }
+
+            saveEditBtn.disabled = true;
+            saveEditBtn.textContent = 'جاري الحفظ...';
+            editMessage.classList.add('hidden');
+
+            const floorNumber = Math.ceil(apartmentNumber / SHAPPU_PER_FLOOR);
+
+            try {
+                const docRef = doc(db, getCollectionPath('residents'), docId);
+                await updateDoc(docRef, {
+                    name: name,
+                    phone: phone,
+                    apartmentNumber: apartmentNumber,
+                    floorNumber: floorNumber,
+                    updatedAt: new Date().toISOString()
+                });
+
+                console.log("Resident document successfully updated!");
+                editModal.classList.add('hidden');
+            } catch (error) {
+                console.error("Error updating resident document: ", error);
+                editMessage.textContent = `فشل حفظ التعديلات: ${error.message}`;
+                editMessage.classList.remove('hidden');
+            } finally {
+                saveEditBtn.disabled = false;
+                saveEditBtn.textContent = 'حفظ التعديلات';
+            }
+        });
+
 
         // **********************************************
-        // 6. معالج إرسال النموذج (Create)
+        // 8. معالجات إرسال النماذج (CREATE)
         // **********************************************
 
+        // 8.1. إضافة ساكن جديد
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!isAuthReady) {
-                showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة قبل الإضافة.");
-                return;
-            }
+            if (!isAuthReady) { showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة قبل الإضافة.", formMessage); return; }
 
             const name = nameInput.value.trim();
             const phone = phoneInput.value.trim();
-
-            if (!name || !phone) {
-                showFormError("يرجى إدخال كل من الاسم ورقم الهاتف.");
+            const apartmentNumber = parseInt(apartmentInput.value.trim(), 10);
+            
+            if (!name || !phone || isNaN(apartmentNumber) || apartmentNumber < 1) {
+                showFormError("يرجى إدخال جميع الحقول بشكل صحيح.", formMessage);
                 return;
             }
 
+            const floorNumber = Math.ceil(apartmentNumber / SHAPPU_PER_FLOOR); 
             submitButton.disabled = true;
             submitButton.textContent = 'جاري الإضافة...';
             formMessage.classList.add('hidden');
@@ -310,29 +909,223 @@
                 const newResident = {
                     name: name,
                     phone: phone,
+                    apartmentNumber: apartmentNumber, 
+                    floorNumber: floorNumber,         
                     createdAt: new Date().toISOString(),
-                    // إضافة userId لتسهيل تتبع المنشئ (حتى لو كانت البيانات عامة)
                     createdBy: userId
                 };
 
-                // إضافة مستند جديد إلى مجموعة 'residents'
-                const docRef = await addDoc(collection(db, getCollectionPath()), newResident);
+                await addDoc(collection(db, getCollectionPath('residents')), newResident);
                 
-                console.log("Document written with ID: ", docRef.id);
-                
-                // مسح حقول النموذج
                 nameInput.value = '';
                 phoneInput.value = '';
+                apartmentInput.value = '';
                 
-                // لا حاجة لتحديث القائمة يدوياً، onSnapshot سيقوم بذلك
             } catch (error) {
-                console.error("Error adding document: ", error);
-                showFormError(`فشل إضافة الساكن: ${error.message}`);
+                console.error("Error adding resident document: ", error);
+                showFormError(`فشل إضافة الساكن: ${error.message}`, formMessage);
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'إضافة الساكن';
             }
         });
+
+        // 8.2. إضافة مصروف جديد
+        expenseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isAuthReady) { showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة قبل الإضافة.", expenseMessage); return; }
+
+            const description = expenseDescriptionInput.value.trim();
+            const amount = parseFloat(expenseAmountInput.value);
+            const date = expenseDateInput.value;
+            
+            if (!description || isNaN(amount) || amount <= 0 || !date) {
+                showFormError("يرجى إدخال وصف ومبلغ موجب وتاريخ.", expenseMessage);
+                return;
+            }
+
+            expenseSubmitButton.disabled = true;
+            expenseSubmitButton.textContent = 'جاري الإضافة...';
+            expenseMessage.classList.add('hidden');
+
+            try {
+                const newExpense = {
+                    description: description,
+                    amount: amount,
+                    date: date, // YYYY-MM-DD
+                    createdAt: new Date().toISOString(),
+                    createdBy: userId
+                };
+
+                await addDoc(collection(db, getCollectionPath('expenses')), newExpense);
+                
+                expenseDescriptionInput.value = '';
+                expenseAmountInput.value = '';
+                expenseDateInput.value = '';
+                
+            } catch (error) {
+                console.error("Error adding expense document: ", error);
+                showFormError(`فشل إضافة المصروف: ${error.message}`, expenseMessage);
+            } finally {
+                expenseSubmitButton.disabled = false;
+                expenseSubmitButton.textContent = 'إضافة مصروف';
+            }
+        });
+
+        // 8.3. إضافة إيراد جديد
+        revenueForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isAuthReady) { showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة قبل الإضافة.", revenueMessage); return; }
+
+            const residentId = revenueResidentSelect.value;
+            const amount = parseFloat(revenueAmountInput.value);
+            const monthPeriod = revenueMonthPeriodInput.value;
+            const collectionDate = revenueDateInput.value;
+
+            if (!residentId || isNaN(amount) || amount <= 0 || !monthPeriod || !collectionDate) {
+                showFormError("يرجى اختيار ساكن وإدخال مبلغ موجب وتحديد الشهر وتاريخ التحصيل.", revenueMessage);
+                return;
+            }
+
+            const resident = allResidents.find(r => r.id === residentId);
+            const residentName = resident ? resident.name : 'ساكن غير معروف';
+
+            revenueSubmitButton.disabled = true;
+            revenueSubmitButton.textContent = 'جاري الإضافة...';
+            revenueMessage.classList.add('hidden');
+
+            try {
+                const newRevenue = {
+                    residentId: residentId,
+                    residentName: residentName,
+                    amount: amount,
+                    monthPeriod: monthPeriod, // YYYY-MM
+                    collectionDate: collectionDate, // YYYY-MM-DD (تاريخ التحصيل الفعلي)
+                    createdAt: new Date().toISOString(),
+                    createdBy: userId
+                };
+
+                await addDoc(collection(db, getCollectionPath('revenues')), newRevenue);
+                
+                revenueResidentSelect.value = '';
+                revenueAmountInput.value = '';
+                revenueMonthPeriodInput.value = '';
+                revenueDateInput.value = '';
+                
+            } catch (error) {
+                console.error("Error adding revenue document: ", error);
+                showFormError(`فشل إضافة الإيراد: ${error.message}`, revenueMessage);
+            } finally {
+                revenueSubmitButton.disabled = false;
+                revenueSubmitButton.textContent = 'تسجيل الإيراد';
+            }
+        });
+
+
+        // **********************************************
+        // 9. وظيفة التقرير المالي الشهري (REPORTING)
+        // **********************************************
+
+        reportMonthSelector.addEventListener('change', (e) => {
+            generateMonthlyReport(e.target.value);
+        });
+
+        function generateMonthlyReport(monthPeriod) {
+            if (!isAuthReady) return;
+
+            reportLoading.classList.remove('hidden');
+            reportSummary.innerHTML = '';
+            debtReportList.innerHTML = '';
+
+            // 1. تصفية الإيرادات والمصروفات للشهر المحدد (YYYY-MM)
+            const filteredExpenses = allExpenses.filter(e => e.date.substring(0, 7) === monthPeriod);
+            const filteredRevenues = allRevenues.filter(r => r.monthPeriod === monthPeriod);
+
+            // 2. حساب المجاميع
+            const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const totalRevenues = filteredRevenues.reduce((sum, r) => sum + r.amount, 0);
+            const netBalance = totalRevenues - totalExpenses;
+
+            // 3. عرض الملخص
+            renderSummary(totalRevenues, totalExpenses, netBalance, monthPeriod);
+
+            // 4. حساب المديونية لكل ساكن
+            calculateDebt(monthPeriod, filteredRevenues);
+
+            reportLoading.classList.add('hidden');
+        }
+
+        /**
+         * عرض ملخص الإيرادات والمصروفات وصافي الحساب
+         */
+        function renderSummary(revenues, expenses, net, month) {
+            const monthName = new Date(month).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' });
+            
+            const cards = [
+                { title: `إجمالي الإيرادات في ${monthName}`, amount: revenues, color: 'green', icon: '💰' },
+                { title: `إجمالي المصروفات في ${monthName}`, amount: expenses, color: 'red', icon: '💸' },
+                { title: `صافي الحساب`, amount: net, color: net >= 0 ? 'indigo' : 'red', icon: net >= 0 ? '✅' : '🚨' }
+            ];
+
+            reportSummary.innerHTML = cards.map(card => `
+                <div class="bg-${card.color}-100 p-5 rounded-xl shadow-lg border border-${card.color}-200 flex flex-col items-center text-center">
+                    <p class="text-xs font-semibold text-${card.color}-700 mb-2">${card.title}</p>
+                    <p class="text-3xl font-extrabold text-${card.color}-800 dir-ltr flex items-center">
+                        ${card.icon} ${formatCurrency(card.amount)}
+                    </p>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * حساب وعرض مديونية السكان
+         */
+        function calculateDebt(monthPeriod, filteredRevenues) {
+            if (allResidents.length === 0) {
+                debtReportList.innerHTML = '<p class="text-center text-gray-500 p-4">لا يوجد سكان مسجلون لحساب المديونية.</p>';
+                return;
+            }
+
+            const monthName = new Date(monthPeriod).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' });
+            debtReportList.innerHTML = ''; // مسح القائمة
+
+            const residentPayments = filteredRevenues.reduce((acc, rev) => {
+                acc[rev.residentId] = (acc[rev.residentId] || 0) + rev.amount;
+                return acc;
+            }, {});
+
+            allResidents.forEach(resident => {
+                const totalDue = MONTHLY_FEE;
+                const totalPaid = residentPayments[resident.id] || 0;
+                const outstandingDebt = totalDue - totalPaid;
+
+                const debtColor = outstandingDebt > 0 ? 'red' : (outstandingDebt < 0 ? 'blue' : 'green');
+                const statusText = outstandingDebt > 0 ? `مديونية: ${formatCurrency(outstandingDebt)}` : 
+                                   (outstandingDebt < 0 ? `دفع زائد: ${formatCurrency(Math.abs(outstandingDebt))}` : 'تم السداد بالكامل');
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `grid grid-cols-12 gap-2 items-center p-4 bg-white rounded-xl shadow-sm border border-${debtColor}-100`;
+                
+                itemDiv.innerHTML = `
+                    <div class="col-span-12 md:col-span-4 font-bold text-gray-900">${resident.name} (شقة: ${resident.apartmentNumber})</div>
+                    
+                    <div class="col-span-4 md:col-span-2 text-center text-sm">
+                        <span class="md:hidden font-semibold text-gray-600">المطلوب: </span>
+                        <span class="text-sm font-medium text-gray-700">${formatCurrency(totalDue)}</span>
+                    </div>
+
+                    <div class="col-span-4 md:col-span-2 text-center text-sm">
+                        <span class="md:hidden font-semibold text-gray-600">المسدد: </span>
+                        <span class="text-sm font-medium text-green-600">${formatCurrency(totalPaid)}</span>
+                    </div>
+
+                    <div class="col-span-12 md:col-span-4 text-center text-lg font-extrabold text-${debtColor}-700">
+                        ${statusText}
+                    </div>
+                `;
+                debtReportList.appendChild(itemDiv);
+            });
+        }
     </script>
 </body>
 </html>
