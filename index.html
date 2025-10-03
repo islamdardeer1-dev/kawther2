@@ -238,10 +238,16 @@
             const residentsRef = getResidentsCollectionRef();
             if (!residentsRef) return;
 
+            // ************ FIX: Hide loading message immediately to prevent it from hanging ************
+            residentsList.innerHTML = '';
+            loadingMessage.classList.add('hidden');
+            emptyListMessage.classList.remove('hidden'); // Assume empty initially
+
             // Use onSnapshot for real-time updates
             onSnapshot(residentsRef, (snapshot) => {
-                residentsList.innerHTML = ''; // Clear existing list
-                loadingMessage.classList.add('hidden');
+                
+                // Clear the list before rendering new data
+                residentsList.innerHTML = ''; 
                 
                 if (snapshot.empty) {
                     emptyListMessage.classList.remove('hidden');
@@ -294,6 +300,8 @@
 
             }, (error) => {
                 console.error("Firestore onSnapshot error:", error);
+                loadingMessage.classList.add('hidden'); // Ensure hidden on error too
+                emptyListMessage.classList.add('hidden'); // Hide empty message if error occurs
                 residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء جلب البيانات: ${error.message}</p>`;
             });
         }
