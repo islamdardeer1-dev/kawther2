@@ -16,6 +16,15 @@
         .container {
             max-width: 600px;
         }
+        /* إخفاء سهم القوائم المنسدلة في متصفحات معينة لتحسين الشكل مع ظهورها في Tailwind */
+        select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209L10%2012L13%209%22%20stroke%3D%22%236B7280%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%2D%22round%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: left 0.75rem center; /* تحريك السهم إلى اليسار في وضع RTL */
+            padding-right: 2.5rem; /* مساحة للسهم */
+            padding-left: 1rem; /* تقليل البادينغ الداخلي على اليمين */
+            appearance: none; /* إخفاء سهم المتصفح الافتراضي */
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -47,13 +56,13 @@
                         class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
             </div>
 
-            <!-- الدور ورقم الشقة في صف واحد (Responsive) -->
+            <!-- الدور ورقم الشقة في صف واحد (Responsive) - تم تعديل الفئات لضمان التخطيط الأفقي على الشاشات الكبيرة -->
             <div class="flex flex-col sm:flex-row gap-4">
                 <!-- الدور -->
                 <div class="flex-1">
                     <label for="floor-select" class="block text-sm font-medium text-gray-700">الدور</label>
                     <select id="floor-select" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-pointer appearance-none">
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-pointer">
                         <option value="" disabled selected>اختر دور المبنى</option>
                     </select>
                 </div>
@@ -62,7 +71,7 @@
                 <div class="flex-1">
                     <label for="unit-select" class="block text-sm font-medium text-gray-700">رقم الشقة / المخزن</label>
                     <select id="unit-select" required disabled
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-gray-100 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-not-allowed appearance-none">
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-gray-100 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-not-allowed">
                         <option value="" disabled selected>اختر الدور أولاً لتظهر الشقق</option>
                     </select>
                 </div>
