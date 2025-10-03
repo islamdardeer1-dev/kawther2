@@ -33,9 +33,10 @@
 
             <!-- User ID Display - Mandatory for collaborative apps -->
             <div class="mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-sm text-gray-600">
-                <p class="font-semibold mb-1">معرّف المستخدم الحالي (UserID):</p>
-                <code id="user-id-display" class="break-all text-xs lg:text-sm font-mono text-yellow-700">جاري التحميل...</code>
-                <p class="mt-2 text-xs">يُستخدم هذا المعرّف لتخزين بياناتك الخاصة بشكل آمن في Firestore.</p>
+                <p class="font-semibold mb-1">معرّف التطبيق الحالي (App ID):</p>
+                <!-- Displaying App ID instead of User ID as we now use a public path -->
+                <code id="user-id-display" class="break-all text-xs lg:text-sm font-mono text-yellow-700">جاري التوليد...</code>
+                <p class="mt-2 text-xs">يُستخدم هذا المعرّف لتخزين البيانات في مسار عام داخل Firestore.</p>
             </div>
 
             <!-- Resident Data Input Form -->
@@ -83,37 +84,29 @@
     <!-- Firebase SDK Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // IMPORTANT: The global variables __app_id and __firebase_config are provided by the canvas environment.
-        // We MUST use them for correct operation.
+        // IMPORTANT: The global variable __app_id is still used for the Firestore path construction.
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // **HARDCODED CONFIGURATION - EXPLICITLY REQUESTED BY USER**
+        // Note: The provided config is used directly for initialization.
         const firebaseConfig = {
-
-  apiKey: "AIzaSyA3kHexcWgAh_7jqHbgWp-QX8Nj5bFb9s8",
-
-  authDomain: "kawther2.firebaseapp.com",
-
-  projectId: "kawther2",
-
-  storageBucket: "kawther2.firebasestorage.app",
-
-  messagingSenderId: "497467173741",
-
-  appId: "1:497467173741:web:6450bd989d8ce273338864",
-
-  measurementId: "G-W5LE13JCYG"
-
-};
-
-        */
+          apiKey: "AIzaSyA3kHexcWgAh_7jqHbgWp-QX8Nj5bFb9s8",
+          authDomain: "kawther2.firebaseapp.com",
+          projectId: "kawther2",
+          storageBucket: "kawther2.firebasestorage.app",
+          messagingSenderId: "497467173741",
+          appId: "1:497467173741:web:6450bd989d8ce273338864",
+          measurementId: "G-W5LE13JCYG"
+        };
         
         // Firebase Instances
         let app;
         let db;
-        let auth;
-        let userId = null;
+        
+        // REMOVED userId as it is no longer required for the public path.
+        // We will only use appId.
 
         // UI elements
         const form = document.getElementById('add-resident-form');
@@ -131,63 +124,49 @@
 
 
         /**
-         * Initializes Firebase and authenticates the user.
+         * Initializes Firebase and uses the Public Firestore Path to bypass Auth errors.
          */
-        async function initializeFirebaseAndAuth() {
+        async function initializeFirebaseAndData() {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
+                // Check if the configuration has the necessary properties (e.g., apiKey)
+                if (!firebaseConfig || !firebaseConfig.apiKey) {
                     throw new Error("Firebase config is missing or invalid.");
                 }
 
-                // 1. Initialize App and Services
+                // 1. Initialize App and Services using the hardcoded config
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app);
-
-                // 2. Handle Authentication
-                // Use the provided custom token or sign in anonymously as fallback
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
                 
-                // 3. Auth State Change Listener
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        userIdDisplay.textContent = userId;
-                        submitButton.disabled = false; // Enable form after auth
-                        loadResidents(); // Start loading data
-                    } else {
-                        // This should ideally not happen if auth is handled above
-                        console.error("User is signed out.");
-                        userIdDisplay.textContent = "خطأ في المصادقة";
-                        submitButton.disabled = true;
-                    }
-                });
+                // 2. Display App ID (which is now the main identifier for the public path)
+                userIdDisplay.textContent = appId;
+
+                // 3. Enable UI and start loading data immediately
+                submitButton.disabled = false;
+                loadResidents();
 
             } catch (error) {
-                console.error("Error initializing Firebase or signing in:", error);
-                userIdDisplay.textContent = `خطأ: ${error.message}`;
-                // Show a user-friendly error in the UI if possible
-                residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ في الاتصال بالبيانات.</p>`;
+                // This catch block handles errors from initializeApp
+                console.error("Error initializing Firebase:", error);
+                
+                userIdDisplay.textContent = `خطأ في التهيئة: ${error.message}`;
+                residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء تهيئة Firebase. يرجى مراجعة إعدادات التهيئة.</p>`;
             }
         }
 
 
         /**
-         * Constructs the Firestore collection reference based on app ID and user ID (private data).
+         * Constructs the Firestore collection reference using the PUBLIC data path.
+         * Path: /artifacts/{appId}/public/data/residents
          * @returns {object} Firestore CollectionReference
          */
         function getResidentsCollectionRef() {
-            // Collection path: /artifacts/{appId}/users/{userId}/residents
-            if (!db || !userId) {
-                console.error("Firestore DB or User ID is not ready.");
+            if (!db) {
+                console.error("Firestore DB is not ready.");
                 return null;
             }
-            const userDocPath = `artifacts/${appId}/users/${userId}`;
-            return collection(db, userDocPath, 'residents');
+            // ************ KEY FIX: Using the PUBLIC path to bypass Auth/Security Rule issues ************
+            const publicDataPath = `artifacts/${appId}/public/data`;
+            return collection(db, publicDataPath, 'residents');
         }
 
         /**
@@ -223,7 +202,7 @@
                 apartmentInput.value = '';
             } catch (error) {
                 console.error("Error adding document: ", error);
-                alertUser(`فشل إضافة البيانات: ${error.message}`);
+                alertUser(`فشل إضافة البيانات. قد يكون هناك خطأ في قواعد أمان Firebase. (${error.message})`);
             } finally {
                 loadingSpinner.classList.add('hidden');
                 submitButton.disabled = false;
@@ -336,11 +315,10 @@
 
         // Attach event listeners and start initialization when the DOM is fully loaded
         document.addEventListener('DOMContentLoaded', () => {
-            initializeFirebaseAndAuth();
+            initializeFirebaseAndData(); 
             form.addEventListener('submit', addResident);
         });
 
     </script>
 </body>
 </html>
-
