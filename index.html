@@ -16,15 +16,6 @@
         .container {
             max-width: 600px;
         }
-        /* إخفاء سهم القوائم المنسدلة في متصفحات معينة لتحسين الشكل مع ظهورها في Tailwind */
-        select {
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209L10%2012L13%209%22%20stroke%3D%22%236B7280%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%2D%22round%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: left 0.75rem center; /* تحريك السهم إلى اليسار في وضع RTL */
-            padding-right: 2.5rem; /* مساحة للسهم */
-            padding-left: 1rem; /* تقليل البادينغ الداخلي على اليمين */
-            appearance: none; /* إخفاء سهم المتصفح الافتراضي */
-        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -56,26 +47,7 @@
                         class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
             </div>
 
-            <!-- الدور ورقم الشقة في صف واحد (Responsive) - تم تعديل الفئات لضمان التخطيط الأفقي على الشاشات الكبيرة -->
-            <div class="flex flex-col sm:flex-row gap-4">
-                <!-- الدور -->
-                <div class="flex-1">
-                    <label for="floor-select" class="block text-sm font-medium text-gray-700">الدور</label>
-                    <select id="floor-select" required
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-pointer">
-                        <option value="" disabled selected>اختر دور المبنى</option>
-                    </select>
-                </div>
-
-                <!-- رقم الشقة/المخزن (متغير) -->
-                <div class="flex-1">
-                    <label for="unit-select" class="block text-sm font-medium text-gray-700">رقم الشقة / المخزن</label>
-                    <select id="unit-select" required disabled
-                            class="mt-1 block w-full px-4 py-2 border border-gray-300 bg-gray-100 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 cursor-not-allowed">
-                        <option value="" disabled selected>اختر الدور أولاً لتظهر الشقق</option>
-                    </select>
-                </div>
-            </div>
+            <!-- ملاحظة: تم إزالة حقلي الدور ورقم الشقة بناءً على طلب المستخدم -->
 
             <!-- زر التسجيل -->
             <button type="submit" id="submit-button"
@@ -130,8 +102,6 @@
         setLogLevel('Debug');
 
         // عناصر الواجهة
-        const floorSelect = document.getElementById('floor-select');
-        const unitSelect = document.getElementById('unit-select');
         const registrationForm = document.getElementById('registration-form');
         const residentsList = document.getElementById('residents-list');
         const messageBox = document.getElementById('message-box');
@@ -147,76 +117,6 @@
         let residentIdToDelete = null; // حالة لتخزين معرف الساكن المراد حذفه
 
         appIdDisplay.textContent = appId;
-
-        // خريطة الوحدات لكل دور (كما كانت)
-        const floorMap = {
-            'Ground': ['مخزن الشريف', 'مخزن الكوثر'],
-            '1': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 1}`), // 1 to 8
-            '2': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 9}`), // 9 to 16
-            '3': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 17}`), // 17 to 24
-            '4': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 25}`), // 25 to 32
-            '5': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 33}`), // 33 to 40
-            '6': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 41}`), // 41 to 48
-            '7': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 49}`), // 49 to 56
-            '8': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 57}`), // 57 to 64
-            '9': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 65}`), // 65 to 72
-            '10': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 73}`), // 73 to 80
-            '11': Array.from({ length: 8 }, (_, i) => `الشقة ${i + 81}`), // 81 to 88
-        };
-
-        // إنشاء خيارات الدور في القائمة المنسدلة
-        function populateFloorOptions() {
-            const floorOptions = {
-                'Ground': 'الأرضي/المخزن',
-                '1': 'الدور 1',
-                '2': 'الدور 2',
-                '3': 'الدور 3',
-                '4': 'الدور 4',
-                '5': 'الدور 5',
-                '6': 'الدور 6',
-                '7': 'الدور 7',
-                '8': 'الدور 8',
-                '9': 'الدور 9',
-                '10': 'الدور 10',
-                '11': 'الدور 11'
-            };
-
-            for (const [value, text] of Object.entries(floorOptions)) {
-                const option = document.createElement('option');
-                option.value = value;
-                option.textContent = text;
-                floorSelect.appendChild(option);
-            }
-        }
-
-        // تحديث خيارات الشقة/المخزن بناءً على الدور المختار
-        function updateUnitOptions() {
-            const selectedFloor = floorSelect.value;
-            unitSelect.innerHTML = ''; // مسح الخيارات السابقة
-            
-            if (selectedFloor) {
-                const units = floorMap[selectedFloor];
-                units.forEach(unit => {
-                    const option = document.createElement('option');
-                    option.value = unit;
-                    option.textContent = unit;
-                    unitSelect.appendChild(option);
-                });
-                unitSelect.disabled = false;
-                unitSelect.classList.remove('bg-gray-100', 'cursor-not-allowed');
-                unitSelect.classList.add('bg-white', 'cursor-pointer');
-            } else {
-                unitSelect.disabled = true;
-                unitSelect.classList.add('bg-gray-100', 'cursor-not-allowed');
-                unitSelect.classList.remove('bg-white', 'cursor-pointer');
-                const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'اختر الدور أولاً لتظهر الشقق'; // تم التعديل
-                option.disabled = true;
-                option.selected = true;
-                unitSelect.appendChild(option);
-            }
-        }
 
         // عرض رسالة (نجاح/خطأ)
         function showMessage(text, type = 'success') {
@@ -243,22 +143,16 @@
             try {
                 const name = document.getElementById('resident-name').value.trim();
                 const phone = document.getElementById('phone-number').value.trim();
-                const floorValue = floorSelect.value;
-                const unit = unitSelect.value;
 
-                if (!name || !phone || !floorValue || !unit) {
+                // التحقق من الحقول المطلوبة (الاسم ورقم الهاتف فقط)
+                if (!name || !phone) {
                     showMessage('الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
                     return;
                 }
 
-                // تحويل قيمة الدور الإنجليزية إلى العربية للعرض
-                const floorText = floorSelect.options[floorSelect.selectedIndex].textContent;
-
                 const residentData = {
                     name: name,
                     phone: phone,
-                    floor: floorText,
-                    unit: unit,
                     timestamp: serverTimestamp(),
                     registeredBy: auth.currentUser.uid,
                 };
@@ -268,10 +162,6 @@
 
                 showMessage('تم تسجيل الساكن بنجاح! ننتظر تحديث القائمة.', 'success');
                 registrationForm.reset();
-                // إعادة تعيين قائمة الشقق
-                floorSelect.value = '';
-                updateUnitOptions();
-
 
             } catch (e) {
                 console.error("Error adding document: ", e);
@@ -344,7 +234,6 @@
                 });
 
                 // فرز السكان حسب الوقت (الأحدث أولاً)
-                // يجب الانتباه إلى أن timestamp قد تكون null مؤقتًا إذا لم يتم إرسالها بعد، لذلك نقوم بالفرز في JavaScript
                 residentsArray.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
 
                 if (residentsArray.length === 0) {
@@ -354,11 +243,17 @@
 
                 residentsArray.forEach(resident => {
                     const phoneLink = `tel:${resident.phone}`;
+                    
+                    // إذا كان السجل القديم يحتوي على الدور والشقة، فقم بعرضهما بشكل اختياري
+                    const unitInfo = resident.floor && resident.unit 
+                        ? `<p class="text-sm text-indigo-600 font-medium">${resident.floor} - ${resident.unit}</p>`
+                        : '';
+
                     residentsHtml += `
                         <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center transition duration-150 hover:bg-gray-100">
                             <div>
                                 <p class="text-lg font-semibold text-gray-900">${resident.name}</p>
-                                <p class="text-sm text-indigo-600 font-medium">${resident.floor} - ${resident.unit}</p>
+                                ${unitInfo}
                                 <a href="${phoneLink}" class="text-sm text-gray-600 hover:text-indigo-500 transition duration-150">${resident.phone}</a>
                             </div>
                             <!-- زر حذف السجل (يفتح النافذة المنبثقة) -->
@@ -395,11 +290,7 @@
                 const userId = auth.currentUser?.uid || crypto.randomUUID();
                 userIdDisplay.textContent = userId;
 
-                // ملء خيارات الدور
-                populateFloorOptions();
-
                 // إضافة معالجات الأحداث
-                floorSelect.addEventListener('change', updateUnitOptions);
                 registrationForm.addEventListener('submit', addResident);
 
                 // معالجات أحداث النافذة المنبثقة
