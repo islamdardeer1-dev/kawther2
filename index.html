@@ -20,16 +20,16 @@
 </head>
 <body class="p-4 sm:p-8">
 
-    <div id="app" class="container mx-auto bg-white shadow-xl rounded-xl p-6 sm:p-10 border border-gray-200">
+    <div id="app" class="container mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10 border border-gray-200">
         <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6 border-b pb-3">سجل سكان برج 2 الأوقاف</h1>
 
         <!-- رسالة النظام -->
-        <div id="message-box" class="hidden p-3 mb-4 rounded-lg text-center font-medium" role="alert"></div>
+        <div id="message-box" class="hidden p-3 mb-4 rounded-lg text-center font-medium transition duration-300" role="alert"></div>
 
         <!-- معلومات المستخدم -->
-        <div class="text-xs text-gray-500 mb-4 text-left">
-            <p>معرّف التطبيق: <span id="app-id-display" class="font-mono">...</span></p>
-            <p>معرّف المستخدم: <span id="user-id-display" class="font-mono">...</span></p>
+        <div class="text-xs text-gray-500 mb-4 text-left border-b pb-2">
+            <p>معرّف التطبيق: <span id="app-id-display" class="font-mono text-gray-700">...</span></p>
+            <p>معرّف المستخدم: <span id="user-id-display" class="font-mono text-gray-700 break-all">...</span></p>
         </div>
 
         <form id="registration-form" class="space-y-6">
@@ -47,11 +47,10 @@
                         class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
             </div>
 
-            <!-- ملاحظة: تم إزالة حقلي الدور ورقم الشقة بناءً على طلب المستخدم -->
-
             <!-- زر التسجيل -->
             <button type="submit" id="submit-button"
-                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 disabled:bg-indigo-300 disabled:cursor-not-allowed">
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 disabled:bg-indigo-300 disabled:cursor-not-allowed"
+                    disabled>
                 تسجيل ساكن جديد
             </button>
         </form>
@@ -66,17 +65,17 @@
     </div>
 
     <!-- Custom Confirmation Modal (حوار التأكيد المخصص) -->
-    <div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 hidden transition-opacity duration-300 opacity-0">
+    <div id="delete-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 hidden transition-opacity duration-300 opacity-0">
         <div id="modal-content" class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all duration-300 scale-95 opacity-0">
             <h3 class="text-xl font-bold text-red-600 mb-4">تأكيد الحذف</h3>
             <p class="text-gray-700 mb-6">
-                هل أنت متأكد من أنك تريد حذف هذا السجل؟ لا يمكن التراجع عن هذا الإجراء.
+                هل أنت متأكد من أنك تريد حذف السجل الخاص بـ "<span id="resident-name-to-delete" class="font-bold text-gray-900"></span>"؟ لا يمكن التراجع عن هذا الإجراء.
             </p>
             <div class="flex justify-end space-x-3 rtl:space-x-reverse">
                 <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition duration-150">
                     إلغاء
                 </button>
-                <button id="confirm-delete-btn" data-resident-id="" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium shadow-md hover:bg-red-700 transition duration-150">
+                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium shadow-md hover:bg-red-700 transition duration-150">
                     تأكيد الحذف
                 </button>
             </div>
@@ -86,7 +85,7 @@
     <!-- Firebase SDKs and Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // إعدادات Firebase العامة
@@ -94,9 +93,9 @@
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+        let app; // يجب تعريف مثيل التطبيق هنا
+        let db, auth;
+        let isAuthReady = false; // متغير لتتبع حالة المصادقة
 
         // قم بتعيين مستوى تسجيل الدخول لتصحيح الأخطاء
         setLogLevel('Debug');
@@ -107,12 +106,15 @@
         const messageBox = document.getElementById('message-box');
         const appIdDisplay = document.getElementById('app-id-display');
         const userIdDisplay = document.getElementById('user-id-display');
+        const submitButton = document.getElementById('submit-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
         
         // عناصر النافذة المنبثقة (Modal)
         const deleteModal = document.getElementById('delete-modal');
         const modalContent = document.getElementById('modal-content');
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const residentNameToDeleteDisplay = document.getElementById('resident-name-to-delete');
 
         let residentIdToDelete = null; // حالة لتخزين معرف الساكن المراد حذفه
 
@@ -136,7 +138,12 @@
         // دالة لإضافة ساكن جديد
         async function addResident(event) {
             event.preventDefault();
-            const submitButton = document.getElementById('submit-button');
+
+            if (!isAuthReady) {
+                showMessage('النظام غير مهيأ بعد. يرجى الانتظار قليلاً.', 'error');
+                return;
+            }
+
             submitButton.disabled = true;
             submitButton.textContent = 'جاري التسجيل...';
 
@@ -149,14 +156,23 @@
                     showMessage('الرجاء تعبئة جميع الحقول المطلوبة.', 'error');
                     return;
                 }
+                
+                // التأكد من وجود مستخدم مصادق
+                const currentUserId = auth.currentUser?.uid;
+                if (!currentUserId) {
+                    console.error("Authentication Error: Current user is null.");
+                    showMessage('خطأ في المصادقة. يرجى إعادة تحميل الصفحة.', 'error');
+                    return;
+                }
 
                 const residentData = {
                     name: name,
                     phone: phone,
                     timestamp: serverTimestamp(),
-                    registeredBy: auth.currentUser.uid,
+                    registeredBy: currentUserId,
                 };
 
+                // حفظ البيانات في مسار البيانات العامة المشتركة
                 const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
                 await addDoc(collection(db, collectionPath), residentData);
 
@@ -164,7 +180,7 @@
                 registrationForm.reset();
 
             } catch (e) {
-                console.error("Error adding document: ", e);
+                console.error("Error adding document to Firestore: ", e);
                 showMessage('حدث خطأ أثناء عملية التسجيل: ' + e.message, 'error');
             } finally {
                 submitButton.disabled = false;
@@ -174,8 +190,10 @@
 
         // --- وظائف إدارة النافذة المنبثقة (Modal) ---
 
-        function showDeleteModal(residentId) {
+        function showDeleteModal(residentId, residentName) {
             residentIdToDelete = residentId;
+            residentNameToDeleteDisplay.textContent = residentName;
+
             // إظهار النافذة المنبثقة
             deleteModal.classList.remove('hidden');
             // تطبيق تأثير الدخول (fade/scale in)
@@ -192,13 +210,15 @@
             setTimeout(() => {
                 deleteModal.classList.add('hidden');
                 residentIdToDelete = null; // مسح المعرّف بعد الإخفاء
+                residentNameToDeleteDisplay.textContent = '';
             }, 300); // الانتظار حتى انتهاء الانتقال
         }
 
         // دالة لحذف ساكن (تقوم الآن بإظهار النافذة المنبثقة للتأكيد)
-        function deleteResident(event) {
+        function promptDeleteResident(event) {
             const residentId = event.currentTarget.getAttribute('data-id');
-            showDeleteModal(residentId);
+            const residentName = event.currentTarget.getAttribute('data-name');
+            showDeleteModal(residentId, residentName);
         }
 
         // دالة لتنفيذ عملية الحذف بعد التأكيد من النافذة المنبثقة
@@ -206,22 +226,34 @@
             const residentId = residentIdToDelete;
             if (!residentId) return;
 
-            hideDeleteModal(); // إخفاء النافذة المنبثقة
+            // تعطيل زر التأكيد لمنع النقرات المزدوجة أثناء العملية
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.textContent = 'جاري الحذف...';
 
             try {
                 const docRef = doc(db, `/artifacts/${appId}/public/data/tower2_residents`, residentId);
                 await deleteDoc(docRef);
                 showMessage('تم حذف السجل بنجاح.', 'success');
             } catch (e) {
-                console.error("Error deleting document: ", e);
+                console.error("Error deleting document from Firestore: ", e);
                 showMessage('حدث خطأ أثناء حذف السجل: ' + e.message, 'error');
+            } finally {
+                // إعادة الزر لحالته الأصلية وإخفاء النافذة المنبثقة
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.textContent = 'تأكيد الحذف';
+                hideDeleteModal(); 
             }
         }
 
         // دالة لعرض قائمة السكان في الوقت الفعلي
         function setupRealtimeListener() {
+            if (!isAuthReady) return; // لا تبدأ الاستماع إلا بعد المصادقة
+
             const collectionPath = `/artifacts/${appId}/public/data/tower2_residents`;
             const q = query(collection(db, collectionPath));
+
+            // إخفاء مؤشر التحميل
+            loadingIndicator.classList.add('hidden');
 
             // الاستماع للتحديثات
             onSnapshot(q, (snapshot) => {
@@ -246,20 +278,30 @@
                     
                     // إذا كان السجل القديم يحتوي على الدور والشقة، فقم بعرضهما بشكل اختياري
                     const unitInfo = resident.floor && resident.unit 
-                        ? `<p class="text-sm text-indigo-600 font-medium">${resident.floor} - ${resident.unit}</p>`
+                        ? `<p class="text-sm text-indigo-600 font-medium">الوحدة: ${resident.floor} - ${resident.unit}</p>`
                         : '';
 
+                    // تنسيق وقت التسجيل
+                    let timestampText = '';
+                    if (resident.timestamp && resident.timestamp.seconds) {
+                        const date = new Date(resident.timestamp.seconds * 1000);
+                        // تنسيق التاريخ والوقت بالتنسيق المحلي العربي
+                        timestampText = date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    }
+                    
                     residentsHtml += `
                         <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center transition duration-150 hover:bg-gray-100">
                             <div>
                                 <p class="text-lg font-semibold text-gray-900">${resident.name}</p>
                                 ${unitInfo}
                                 <a href="${phoneLink}" class="text-sm text-gray-600 hover:text-indigo-500 transition duration-150">${resident.phone}</a>
+                                <!-- عرض وقت التسجيل إذا توفر -->
+                                ${timestampText ? `<p class="text-xs text-gray-400 mt-1">تم التسجيل: ${timestampText}</p>` : ''}
                             </div>
                             <!-- زر حذف السجل (يفتح النافذة المنبثقة) -->
-                            <button data-id="${resident.id}" class="delete-btn text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100" title="حذف السجل">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                            <button data-id="${resident.id}" data-name="${resident.name}" class="delete-btn text-red-500 hover:text-red-700 transition duration-150 p-2 rounded-full hover:bg-red-100" title="حذف السجل">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M16.5 4.478A.75.75 0 0117.25 4v2.25H20a.75.75 0 010 1.5h-.255l-.763 8.375A2.75 2.75 0 0116.5 21h-9A2.75 2.75 0 014.268 18.125l-.764-8.375H4.5a.75.75 0 010-1.5h2.75V4a.75.75 0 011.5 0v2.25h5.5V4a.75.75 0 01.75-.75zM12 9a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0112 9zM9.75 9.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM14.25 9.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5z" clip-rule="evenodd" />
                                 </svg>
                             </button>
                         </div>
@@ -269,7 +311,7 @@
                 residentsList.innerHTML = residentsHtml;
                 // إضافة معالج حدث لأزرار الحذف
                 residentsList.querySelectorAll('.delete-btn').forEach(button => {
-                    button.addEventListener('click', deleteResident);
+                    button.addEventListener('click', promptDeleteResident);
                 });
             }, (error) => {
                 console.error("Error listening to residents list: ", error);
@@ -280,17 +322,30 @@
         // التهيئة وبدء التشغيل
         async function initializeAppAndAuth() {
             try {
-                // تسجيل الدخول باستخدام التوكن المخصص أو تسجيل الدخول كمجهول
+                // 1. التهيئة الأولية
+                // **********************************************
+                // تم حل الخطأ: يجب تهيئة التطبيق (app) أولاً باستخدام firebaseConfig
+                const app = initializeApp(firebaseConfig);
+                // **********************************************
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // 2. محاولة تسجيل الدخول
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                const userId = auth.currentUser?.uid || crypto.randomUUID();
+                // 3. تأكيد المصادقة وتحديث الواجهة
+                const userId = auth.currentUser?.uid || 'غير مصادق';
                 userIdDisplay.textContent = userId;
+                isAuthReady = true;
 
-                // إضافة معالجات الأحداث
+                // تفعيل زر التسجيل
+                submitButton.disabled = false;
+                
+                // 4. إضافة معالجات الأحداث
                 registrationForm.addEventListener('submit', addResident);
 
                 // معالجات أحداث النافذة المنبثقة
@@ -303,12 +358,16 @@
                     }
                 });
 
-                // بدء الاستماع لقائمة السكان
+                // 5. بدء الاستماع لقائمة السكان
                 setupRealtimeListener();
 
             } catch (e) {
-                console.error("Firebase Initialization Error:", e);
-                showMessage(`خطأ في تهيئة النظام: ${e.message}. تأكد من إعدادات Firebase.`, 'error');
+                console.error("Firebase Initialization Error (Critical):", e);
+                // إظهار رسالة خطأ حرجة وإبقاء زر الإرسال معطلاً
+                showMessage(`خطأ في تهيئة النظام. لن يعمل التسجيل: ${e.message}`, 'error');
+                loadingIndicator.textContent = 'فشل تحميل البيانات بسبب خطأ في النظام.';
+                loadingIndicator.classList.remove('hidden');
+                submitButton.disabled = true;
             }
         }
 
