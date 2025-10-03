@@ -3,358 +3,336 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة بيانات السكان</title>
-    <!-- Tailwind CSS CDN for modern styling -->
+    <title>سجل السكان - قاعدة بيانات سحابية</title>
+    <!-- تحميل Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- ضبط الخط الافتراضي لـ Inter وتفعيل نمط RTL -->
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Cairo', sans-serif;
             background-color: #f7f9fb;
-        }
-        /* Custom scrollbar for aesthetics */
-        #residents-list::-webkit-scrollbar {
-            width: 8px;
-        }
-        #residents-list::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1;
-            border-radius: 4px;
         }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
+    <div id="app-container" class="max-w-4xl mx-auto bg-white shadow-xl rounded-xl p-6 md:p-10 border border-gray-200">
+        <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6 border-b-2 pb-3 border-indigo-100">سجل بيانات السكان</h1>
 
-    <div class="min-h-screen flex items-center justify-center p-4">
-        <div class="w-full max-w-2xl bg-white shadow-xl rounded-2xl p-6 md:p-8">
+        <!-- معلومات المستخدم والتحميل -->
+        <div id="status" class="mb-4 p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border-l-4 border-blue-400">
+            <p id="auth-status">جاري التحقق من حالة المستخدم...</p>
+            <p id="user-id-display" class="mt-1 text-xs opacity-75"></p>
+        </div>
 
-            <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center border-b pb-3">
-                نظام إدارة بيانات السكان
-            </h1>
-
-            <!-- App ID Display - Mandatory for collaborative apps -->
-            <div class="mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-sm text-gray-600">
-                <p class="font-semibold mb-1">معرّف التطبيق الحالي (App ID) | معرّف المستخدم (UID):</p>
-                <!-- Displaying App ID and UID (mandatory for multi-user apps) -->
-                <code id="user-id-display" class="break-all text-xs lg:text-sm font-mono text-yellow-700">جاري التوليد...</code>
-                <p class="mt-2 text-xs">يُستخدم هذا المعرّف لتخزين البيانات في مسار عام داخل Firestore لتمكين التعاون.</p>
-            </div>
-
-            <!-- Resident Data Input Form -->
-            <form id="add-resident-form" class="space-y-4 mb-8 p-4 bg-gray-50 rounded-xl border">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">إضافة ساكن جديد</h2>
+        <!-- نموذج إضافة ساكن جديد -->
+        <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">إضافة ساكن جديد</h2>
+            <form id="add-resident-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="name-input" placeholder="الاسم الكامل" required
+                       class="col-span-1 md:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
                 
-                <!-- Name Input -->
-                <div>
-                    <label for="resident-name" class="block text-sm font-medium text-gray-700 mb-1">اسم الساكن</label>
-                    <input type="text" id="resident-name" required placeholder="مثال: أحمد محمد"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
-                            maxlength="50">
-                </div>
-
-                <!-- Apartment Number Input -->
-                <div>
-                    <label for="apartment-number" class="block text-sm font-medium text-gray-700 mb-1">رقم الشقة</label>
-                    <input type="number" id="apartment-number" required placeholder="مثال: 101"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"
-                            min="1" max="9999">
-                </div>
-
-                <!-- Submission Button -->
-                <button type="submit" id="submit-button"
-                        class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 ease-in-out shadow-lg shadow-blue-500/50 flex items-center justify-center disabled:opacity-50"
-                        disabled>
-                    <span id="loading-spinner" class="hidden animate-spin h-5 w-5 mr-3 border-4 border-white border-t-transparent rounded-full"></span>
-                    إضافة البيانات
+                <input type="tel" id="phone-input" placeholder="رقم الهاتف (مثال: 0501234567)" required pattern="[0-9]+"
+                       class="col-span-1 md:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                
+                <button type="submit" id="submit-button" disabled
+                        class="col-span-1 md:col-span-1 bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 disabled:bg-indigo-300 transition duration-200 shadow-md hover:shadow-lg">
+                    إضافة الساكن
                 </button>
             </form>
+            <div id="form-message" class="mt-3 text-sm text-red-600 hidden"></div>
+        </div>
 
-            <!-- Residents List Display -->
-            <h2 class="text-xl font-semibold text-gray-700 mb-4 border-t pt-6">قائمة السكان المسجلين</h2>
-            
-            <div id="residents-list" class="max-h-96 overflow-y-auto space-y-3 p-2">
-                <!-- Data will be injected here by JavaScript -->
-                <p id="loading-message" class="text-center text-gray-500">جاري تحميل البيانات...</p>
+        <!-- قائمة السكان -->
+        <div class="mt-10">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b">السكان المسجلون (<span id="residents-count">0</span>)</h2>
+            <div id="residents-list" class="space-y-3">
+                <!-- سيتم عرض بيانات السكان هنا -->
+                <p id="loading-list" class="text-center text-gray-500 mt-4">جاري تحميل البيانات...</p>
             </div>
-            
-            <p id="empty-list-message" class="hidden text-center text-gray-500 mt-4">لا توجد بيانات سكان مسجلة بعد.</p>
-
+            <p id="empty-list" class="text-center text-gray-500 mt-4 hidden">لا يوجد سكان مسجلون بعد. ابدأ بإضافة أول ساكن!</p>
         </div>
     </div>
 
-    <!-- Firebase SDK Imports -->
+    <!-- Firebase SDKs -->
     <script type="module">
+        // استيراد وظائف Firebase المطلوبة
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // **UPDATED IMPORTS: Added signInWithCustomToken and onAuthStateChanged for robust authentication**
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, setLogLevel, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-
-        // MANDATORY CONFIGURATION: Using the provided global variables.
+        // **********************************************
+        // 1. تهيئة وثوابت Firebase
+        // **********************************************
+        
+        // استخدام متغيرات البيئة المتوفرة في Canvas
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // Firebase Instances
-        let app;
-        let db;
-        let auth;
+        // استخدام التهيئة التي قدمها المستخدم
+        const customFirebaseConfig = {
+            apiKey: "AIzaSyA3kHexcWgAh_7jqHbgWp-QX8Nj5bFb9s8",
+            authDomain: "kawther2.firebaseapp.com",
+            projectId: "kawther2",
+            storageBucket: "kawther2.firebasestorage.app",
+            messagingSenderId: "497467173741",
+            appId: "1:497467173741:web:6450bd989d8ce273338864",
+            measurementId: "G-W5LE13JCYG"
+        };
         
-        // UI elements
-        const form = document.getElementById('add-resident-form');
-        const nameInput = document.getElementById('resident-name');
-        const apartmentInput = document.getElementById('apartment-number');
-        const residentsList = document.getElementById('residents-list');
-        const submitButton = document.getElementById('submit-button');
-        const loadingMessage = document.getElementById('loading-message');
-        const emptyListMessage = document.getElementById('empty-list-message');
-        const userIdDisplay = document.getElementById('user-id-display');
-        const loadingSpinner = document.getElementById('loading-spinner');
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) : customFirebaseConfig;
 
-        // Set log level for debugging Firebase operations
+        // تهيئة التطبيق وقاعدة البيانات والمصادقة
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // قم بتعيين مستوى تسجيل الدخول لتصحيح الأخطاء
         setLogLevel('Debug');
 
+        let isAuthReady = false;
+        let userId = null;
+        let unsubscribe = null; // للاحتفاظ بوظيفة إلغاء الاشتراك في onSnapshot
+
+        // العناصر الأساسية في DOM
+        const form = document.getElementById('add-resident-form');
+        const nameInput = document.getElementById('name-input');
+        const phoneInput = document.getElementById('phone-input');
+        const submitButton = document.getElementById('submit-button');
+        const residentsList = document.getElementById('residents-list');
+        const loadingList = document.getElementById('loading-list');
+        const emptyList = document.getElementById('empty-list');
+        const authStatus = document.getElementById('auth-status');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const formMessage = document.getElementById('form-message');
+        const residentsCount = document.getElementById('residents-count');
+
+        // **********************************************
+        // 2. وظائف مساعدة
+        // **********************************************
 
         /**
-         * Initializes Firebase, handles robust authentication, and starts data loading 
-         * ONLY AFTER the user's authentication state is confirmed.
+         * بناء مسار مجموعة Firestore (لبيانات عامة/مشتركة)
+         * @returns {string} المسار الكامل للمجموعة
          */
-        async function initializeFirebaseAndData() {
-            loadingMessage.classList.remove('hidden');
+        function getCollectionPath() {
+            // المسار العام: /artifacts/{appId}/public/data/{collectionName}
+            return `artifacts/${appId}/public/data/residents`;
+        }
 
-            try {
-                // 1. Initialize App and Services
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app); 
+        /**
+         * عرض رسالة خطأ مؤقتة في النموذج
+         * @param {string} message رسالة الخطأ
+         */
+        function showFormError(message) {
+            formMessage.textContent = message;
+            formMessage.classList.remove('hidden');
+            setTimeout(() => {
+                formMessage.classList.add('hidden');
+            }, 5000);
+        }
 
-                // 2. Mandatory Authentication Handling: Determine sign-in method
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // **********************************************
+        // 3. المصادقة والاستماع لحالة المستخدم
+        // **********************************************
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // المستخدم قام بتسجيل الدخول
+                userId = user.uid;
+                authStatus.textContent = 'تم تسجيل الدخول بنجاح.';
+                userIdDisplay.textContent = `معرّف المستخدم: ${userId}`;
+                isAuthReady = true;
+                submitButton.disabled = false;
                 
-                // Perform sign-in (Custom token takes precedence, otherwise anonymous)
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                
-                // 3. Wait for Auth State Change to confirm user session is ready (CRITICAL FIX)
-                // This ensures loadResidents is called only when the token is fully propagated, 
-                // preventing the "Missing or insufficient permissions" error.
-                onAuthStateChanged(auth, (user) => {
-                    loadingMessage.classList.add('hidden');
-                    
-                    if (user) {
-                        console.log("Auth State Confirmed. User UID:", user.uid);
-                        // User is signed in. Now it is safe to load data.
-                        
-                        // Display App ID and the full User ID (UID) - MANDATORY
-                        userIdDisplay.textContent = `App: ${appId} | UID: ${user.uid}`;
-                        
+                // بدء الاستماع للبيانات بمجرد جاهزية المصادقة
+                setupRealtimeListener();
+
+            } else {
+                // المستخدم غير مسجل الدخول، محاولة المصادقة
+                authStatus.textContent = 'جاري تسجيل الدخول...';
+                try {
+                    if (initialAuthToken) {
+                        // استخدام رمز مميز مخصص إذا كان متوفراً
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        // تسجيل الدخول كمستخدم مجهول
+                        const anonymousUser = await signInAnonymously(auth);
+                        userId = anonymousUser.user.uid;
+                        authStatus.textContent = 'تم تسجيل الدخول كمستخدم مجهول.';
+                        userIdDisplay.textContent = `معرّف المستخدم: ${userId}`;
+                        isAuthReady = true;
                         submitButton.disabled = false;
                         
-                        // Load data
-                        loadResidents();
-                    } else {
-                        // User is signed out or authentication failed.
-                        console.warn("User is signed out or authentication failed.");
-                        userIdDisplay.textContent = `App: ${appId} | UID: غير مصادق`;
-                        residentsList.innerHTML = `<p class="text-red-500 text-center">خطأ في المصادقة. لا يمكن تحميل البيانات.</p>`;
-                        submitButton.disabled = true;
+                        // بدء الاستماع للبيانات بعد تسجيل الدخول
+                        setupRealtimeListener();
                     }
-                });
-
-
-            } catch (error) {
-                console.error("Error initializing Firebase:", error);
-                loadingMessage.classList.add('hidden');
-                userIdDisplay.textContent = `خطأ في التهيئة: ${error.message}`;
-                residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء تهيئة Firebase أو تسجيل الدخول. (${error.message})</p>`;
-            } 
-        }
-
-
-        /**
-         * Constructs the Firestore collection reference using the PUBLIC data path.
-         * Path: /artifacts/{appId}/public/data/residents
-         * @returns {object} Firestore CollectionReference
-         */
-        function getResidentsCollectionRef() {
-            if (!db) {
-                console.error("Firestore DB is not ready.");
-                return null;
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                    authStatus.textContent = `فشل المصادقة: ${error.message}`;
+                    userId = 'anonymous'; // تعيين معرف مؤقت
+                    isAuthReady = true;
+                    // لا يمكن التشغيل بدون مصادقة، إبقاء الزر معطلاً إذا كانت القاعدة تتطلب مصادقة
+                    submitButton.disabled = true;
+                }
             }
-            // Using the PUBLIC path to enable collaborative/anonymous access
-            const publicDataPath = `artifacts/${appId}/public/data`;
-            return collection(db, publicDataPath, 'residents');
-        }
+        });
 
+        // **********************************************
+        // 4. وظيفة الحذف
+        // **********************************************
+        
         /**
-         * Adds a new resident record to Firestore.
-         * @param {Event} e - The form submission event.
+         * حذف سجل ساكن من Firestore
+         * @param {string} docId معرّف المستند المراد حذفه
          */
-        async function addResident(e) {
-            e.preventDefault();
-
-            const name = nameInput.value.trim();
-            const apartment = parseInt(apartmentInput.value, 10);
-
-            if (!name || isNaN(apartment)) {
-                alertUser("يرجى إدخال اسم الساكن ورقم الشقة بشكل صحيح.");
+        async function deleteResident(docId) {
+            if (!isAuthReady) {
+                showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة.");
                 return;
             }
 
-            const residentsRef = getResidentsCollectionRef();
-            if (!residentsRef) return;
-            
-            loadingSpinner.classList.remove('hidden');
-            submitButton.disabled = true;
-
             try {
-                await addDoc(residentsRef, {
-                    name: name,
-                    apartmentNumber: apartment,
-                    timestamp: Date.now()
-                });
-
-                // Clear form inputs on success
-                nameInput.value = '';
-                apartmentInput.value = '';
-                
-                alertUser(`تم إضافة الساكن ${name} بنجاح.`);
-
+                const docRef = doc(db, getCollectionPath(), docId);
+                await deleteDoc(docRef);
+                // لا حاجة لتحديث القائمة يدوياً، onSnapshot سيقوم بذلك
+                console.log("Document successfully deleted!");
             } catch (error) {
-                console.error("Error adding document: ", error);
-                alertUser(`فشل إضافة البيانات. قد يكون هناك خطأ في قواعد أمان Firebase. (${error.message})`);
-            } finally {
-                loadingSpinner.classList.add('hidden');
-                submitButton.disabled = false;
+                console.error("Error removing document: ", error);
+                showFormError(`فشل حذف السجل: ${error.message}`);
             }
         }
 
-        /**
-         * Deletes a resident record from Firestore.
-         * IMPORTANT: Using custom message box instead of window.confirm()
-         * @param {string} docId - The Firestore document ID to delete.
-         */
-        async function deleteResident(docId) {
-            const residentsRef = getResidentsCollectionRef();
-            if (!residentsRef) return;
+        // **********************************************
+        // 5. وظيفة عرض البيانات (onSnapshot)
+        // **********************************************
+
+        function renderResidents(residentsData) {
+            residentsList.innerHTML = '';
             
-            // Non-blocking approach: immediately attempt to delete and provide UI feedback.
-            alertUser("جاري محاولة حذف الساكن...");
+            residentsCount.textContent = residentsData.length;
 
-            try {
-                await deleteDoc(doc(residentsRef, docId));
-                alertUser("تم حذف الساكن بنجاح.");
-                // Data will automatically refresh via onSnapshot
-            } catch (error) {
-                console.error("Error deleting document: ", error);
-                alertUser(`فشل حذف البيانات: ${error.message}`);
+            if (residentsData.length === 0) {
+                loadingList.classList.add('hidden');
+                emptyList.classList.remove('hidden');
+                return;
             }
-        }
 
-        /**
-         * Subscribes to real-time updates from Firestore and updates the UI.
-         */
-        function loadResidents() {
-            const residentsRef = getResidentsCollectionRef();
-            if (!residentsRef) return;
+            emptyList.classList.add('hidden');
+            loadingList.classList.add('hidden');
 
-            // Use onSnapshot for real-time updates
-            onSnapshot(residentsRef, (snapshot) => {
-                
-                // Clear the list before rendering new data
-                residentsList.innerHTML = ''; 
-                
-                if (snapshot.empty) {
-                    emptyListMessage.classList.remove('hidden');
-                    return;
-                }
-                
-                emptyListMessage.classList.add('hidden');
+            residentsData.forEach(resident => {
+                const residentDiv = document.createElement('div');
+                residentDiv.className = 'flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition duration-200';
+                residentDiv.innerHTML = `
+                    <div>
+                        <p class="text-lg font-medium text-gray-900">${resident.name}</p>
+                        <p class="text-sm text-gray-500 dir-ltr">${resident.phone}</p>
+                    </div>
+                    <button data-id="${resident.id}" 
+                            class="delete-btn bg-red-500 text-white p-2 rounded-full text-xs font-bold hover:bg-red-600 transition duration-150 shadow-sm"
+                            title="حذف السجل">
+                        حذف
+                    </button>
+                `;
+                residentsList.appendChild(residentDiv);
+            });
 
-                // Sort data client-side by apartment number before rendering
-                const residentsData = [];
-                snapshot.forEach(doc => {
-                    residentsData.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
-                });
-                
-                // Client-side sorting is used to avoid Firestore index errors
-                residentsData.sort((a, b) => a.apartmentNumber - b.apartmentNumber);
-
-                residentsData.forEach(resident => {
-                    const residentElement = document.createElement('div');
-                    residentElement.className = 'flex justify-between items-center bg-white p-4 rounded-xl shadow border border-gray-200 hover:shadow-md transition duration-150';
+            // إضافة مستمعي الأحداث لأزرار الحذف
+            residentsList.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const docId = e.target.getAttribute('data-id');
                     
-                    residentElement.innerHTML = `
-                        <div>
-                            <p class="text-lg font-medium text-gray-800">${resident.name}</p>
-                            <p class="text-sm text-gray-500">
-                                <span class="font-semibold">رقم الشقة:</span> ${resident.apartmentNumber}
-                            </p>
-                        </div>
-                        <button class="delete-btn text-red-500 hover:text-red-700 p-2 rounded-full transition duration-150" 
-                                data-id="${resident.id}" title="حذف الساكن">
-                            <!-- SVG Delete Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    `;
+                    // تم إزالة window.confirm() لأنه لا يعمل في بيئة iframe.
+                    // يتم الحذف مباشرة بعد الضغط على الزر.
 
-                    residentsList.appendChild(residentElement);
+                    // منع الضغطات المتعددة أثناء الحذف وعرض حالة مؤقتة
+                    e.target.disabled = true;
+                    e.target.textContent = '...';
+
+                    deleteResident(docId);
+                    
+                    // ملاحظة: onSnapshot ستعيد بناء القائمة بالكامل، مما يعيد تفعيل الزر تلقائياً.
                 });
-
-                // Attach delete listeners after rendering
-                document.querySelectorAll('.delete-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const docId = e.currentTarget.getAttribute('data-id');
-                        deleteResident(docId);
-                    });
-                });
-
-            }, (error) => {
-                console.error("Firestore onSnapshot error:", error);
-                emptyListMessage.classList.add('hidden');
-                residentsList.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء جلب البيانات: ${error.message}</p>`;
             });
         }
-        
-        /**
-         * Displays a non-alert message to the user as a temporary DOM element.
-         */
-        function alertUser(message) {
-            console.warn("UI Message:", message);
-            
-            // Remove previous temporary messages
-            document.querySelectorAll('.temp-alert').forEach(el => el.remove());
 
-            const tempMessage = document.createElement('p');
-            tempMessage.className = 'temp-alert text-sm text-center mt-2 p-2 rounded-lg';
-            
-            if (message.includes("نجاح") || message.includes("تم ")) {
-                tempMessage.classList.add('text-green-700', 'bg-green-100');
-            } else if (message.includes("فشل") || message.includes("خطأ")) {
-                tempMessage.classList.add('text-red-700', 'bg-red-100');
-            } else {
-                tempMessage.classList.add('text-blue-700', 'bg-blue-100');
+        function setupRealtimeListener() {
+            if (unsubscribe) {
+                unsubscribe(); // إلغاء الاشتراك السابق إذا وجد
             }
 
-            tempMessage.textContent = message;
-            form.insertAdjacentElement('afterend', tempMessage); // Insert after the form
+            if (!isAuthReady) return;
 
-            // Remove the message after 5 seconds
-            setTimeout(() => tempMessage.remove(), 5000);
+            const residentsQuery = query(collection(db, getCollectionPath()));
+            
+            unsubscribe = onSnapshot(residentsQuery, (querySnapshot) => {
+                const residents = [];
+                querySnapshot.forEach((doc) => {
+                    residents.push({ id: doc.id, ...doc.data() });
+                });
+                // فرز البيانات محلياً حسب الاسم
+                residents.sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
+                renderResidents(residents);
+            }, (error) => {
+                console.error("Error getting documents: ", error);
+                loadingList.textContent = `حدث خطأ أثناء تحميل البيانات: ${error.message}`;
+            });
         }
 
-        // Attach event listeners and start initialization when the DOM is fully loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeFirebaseAndData(); 
-            form.addEventListener('submit', addResident);
-        });
 
+        // **********************************************
+        // 6. معالج إرسال النموذج (Create)
+        // **********************************************
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!isAuthReady) {
+                showFormError("الرجاء الانتظار حتى يتم التحقق من حالة المصادقة قبل الإضافة.");
+                return;
+            }
+
+            const name = nameInput.value.trim();
+            const phone = phoneInput.value.trim();
+
+            if (!name || !phone) {
+                showFormError("يرجى إدخال كل من الاسم ورقم الهاتف.");
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'جاري الإضافة...';
+            formMessage.classList.add('hidden');
+
+            try {
+                const newResident = {
+                    name: name,
+                    phone: phone,
+                    createdAt: new Date().toISOString(),
+                    // إضافة userId لتسهيل تتبع المنشئ (حتى لو كانت البيانات عامة)
+                    createdBy: userId
+                };
+
+                // إضافة مستند جديد إلى مجموعة 'residents'
+                const docRef = await addDoc(collection(db, getCollectionPath()), newResident);
+                
+                console.log("Document written with ID: ", docRef.id);
+                
+                // مسح حقول النموذج
+                nameInput.value = '';
+                phoneInput.value = '';
+                
+                // لا حاجة لتحديث القائمة يدوياً، onSnapshot سيقوم بذلك
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showFormError(`فشل إضافة الساكن: ${error.message}`);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'إضافة الساكن';
+            }
+        });
     </script>
 </body>
 </html>
